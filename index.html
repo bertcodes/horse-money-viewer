@@ -504,24 +504,37 @@
             max-height: 80vh;
             overflow: hidden;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
         }
 
         .chart-container.edit-container {
             max-width: 400px;
+            max-height: 85vh;
         }
 
         .chart-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 15px;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
             border-bottom: 1px solid #eee;
+            flex-shrink: 0;
         }
 
         .chart-title {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s;
         }
 
         .close-btn {
@@ -540,26 +553,28 @@
         /* 编辑表单 */
         .edit-form {
             padding: 10px 0;
+            max-height: 70vh;
+            overflow-y: auto;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 12px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 8px;
-            font-size: 14px;
+            margin-bottom: 5px;
+            font-size: 12px;
             color: #34495e;
             font-weight: 500;
         }
 
         .form-group input {
             width: 100%;
-            padding: 10px;
+            padding: 6px 8px;
             border: 1px solid #ddd;
             border-radius: 5px;
-            font-size: 14px;
+            font-size: 13px;
             transition: border-color 0.3s;
         }
 
@@ -577,14 +592,17 @@
         .form-buttons {
             display: flex;
             gap: 10px;
-            margin-top: 25px;
-            padding-top: 20px;
+            margin-top: 15px;
+            padding-top: 15px;
             border-top: 1px solid #eee;
+            flex-shrink: 0;
         }
 
         .form-buttons .toolbar-btn {
             flex: 1;
             text-align: center;
+            padding: 6px 12px;
+            font-size: 13px;
         }
 
         /* 可编辑单元格 */
