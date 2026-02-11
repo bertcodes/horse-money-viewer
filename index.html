@@ -1075,6 +1075,11 @@
                         <div style="margin-bottom: 20px;">
                             <h4 style="margin-bottom: 10px;">Gist 信息</h4>
                             <div id="gistInfo" style="font-size: 12px; color: #666;"></div>
+                            <div style="margin-top: 10px;">
+                                <label style="font-size: 12px; color: #666;">手动设置 Gist ID（多设备同步时使用）:</label>
+                                <input type="text" id="manualGistId" placeholder="输入 Gist ID，如: 6efbf674..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; margin-top: 5px;">
+                                <button class="toolbar-btn" onclick="setManualGistId()" style="width: 100%; margin-top: 5px;">设置 Gist ID</button>
+                            </div>
                         </div>
 
                         <button class="toolbar-btn" onclick="clearGitHubToken()" style="color: #e74c3c; width: 100%;">清除配置</button>
@@ -2184,6 +2189,18 @@
             }
         }
 
+        // 手动设置 Gist ID
+        function setManualGistId() {
+            const gistId = document.getElementById('manualGistId').value.trim();
+            if (!gistId) {
+                showToast('请输入 Gist ID');
+                return;
+            }
+            localStorage.setItem(GIST_ID_KEY, gistId);
+            showToast('Gist ID 已设置！');
+            updateCloudSyncUI();
+        }
+
         // 切换自动同步
         function toggleAutoSync() {
             autoSyncEnabled = document.getElementById('autoSyncCheckbox').checked;
@@ -2221,8 +2238,9 @@
                 };
 
                 const gistId = localStorage.getItem(GIST_ID_KEY);
+                console.log('开始备份 - Token:', token ? '已配置' : '未配置', 'Gist ID:', gistId || '未找到');
 
-                if (gistId) {
+                if (gistId && gistId !== '') {
                     // 更新现有 Gist
                     const response = await fetch(`https://api.github.com/gists/${gistId}`, {
                         method: 'PATCH',
@@ -2242,10 +2260,14 @@
 
                     if (!response.ok) {
                         const error = await response.json();
+                        console.error('更新 Gist 失败:', error);
                         throw new Error(error.message || '备份失败');
                     }
+
+                    console.log('Gist 更新成功:', gistId);
                 } else {
                     // 创建新 Gist
+                    console.log('创建新 Gist');
                     const response = await fetch('https://api.github.com/gists', {
                         method: 'POST',
                         headers: {
@@ -2265,10 +2287,13 @@
 
                     if (!response.ok) {
                         const error = await response.json();
+                        console.error('创建 Gist 失败:', error);
                         throw new Error(error.message || '备份失败');
                     }
 
                     const result = await response.json();
+                    console.log('创建 Gist 响应:', result);
+
                     const newGistId = result.id;
 
                     if (!newGistId) {
@@ -2330,6 +2355,8 @@
                 if (btn) btn.disabled = true;
                 if (btn) btn.textContent = '恢复中...';
 
+                console.log('开始恢复数据，URL:', `https://api.github.com/gists/${gistId}`);
+
                 const response = await fetch(`https://api.github.com/gists/${gistId}`, {
                     headers: {
                         'Authorization': `token ${token}`,
@@ -2339,17 +2366,22 @@
 
                 if (!response.ok) {
                     const error = await response.json();
+                    console.error('获取 Gist 失败:', error);
                     throw new Error(error.message || '恢复失败');
                 }
 
                 const gist = await response.json();
+                console.log('Gist 响应:', gist);
+
                 const content = gist.files['leeks-config.json']?.content;
 
                 if (!content) {
+                    console.error('Gist 文件列表:', Object.keys(gist.files || {}));
                     throw new Error('Gist 中找不到配置文件');
                 }
 
                 const backupData = JSON.parse(content);
+                console.log('解析备份数据:', backupData);
 
                 // 恢复数据
                 stocks = backupData.stocks || [];
