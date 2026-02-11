@@ -879,6 +879,7 @@
                 <button class="toolbar-btn" onclick="clearAllStocks()" style="color: #e74c3c;">清空</button>
                 <button class="toolbar-btn" onclick="exportStocks()">导出</button>
                 <button class="toolbar-btn" onclick="importStocks()">导入</button>
+                <button class="toolbar-btn" onclick="openCloudSync()">云端同步</button>
                 <button class="toolbar-btn" onclick="openColumnSettings()">列设置</button>
             </div>
             <div class="toolbar-right">
@@ -909,6 +910,8 @@
                         <th onclick="sortTable('now')">当前价</th>
                         <th onclick="sortTable('change')">涨跌</th>
                         <th onclick="sortTable('changePercent')">涨跌幅</th>
+                        <th onclick="sortTable('volume')">成交量</th>
+                        <th onclick="sortTable('amount')">成交额</th>
                         <th onclick="sortTable('time')">更新时间</th>
                         <th onclick="sortTable('max')">最高价</th>
                         <th onclick="sortTable('min')">最低价</th>
@@ -1026,6 +1029,60 @@
             </div>
         </div>
 
+        <!-- 云端同步弹窗 -->
+        <div class="column-settings-popup" id="cloudSyncPopup" onclick="closeCloudSync(event)">
+            <div class="column-settings-container" onclick="event.stopPropagation()" style="max-width: 500px;">
+                <div class="chart-header">
+                    <span class="chart-title">云端同步设置</span>
+                    <button class="close-btn" onclick="closeCloudSync()">×</button>
+                </div>
+                <div class="column-settings-content" style="padding: 20px;">
+                    <!-- 未配置状态 -->
+                    <div id="notConfigured" style="display: none;">
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 10px;">配置 GitHub Token</h4>
+                            <p style="font-size: 12px; color: #666; margin-bottom: 15px;">
+                                1. 点击下方按钮前往 GitHub 生成 Personal Access Token<br>
+                                2. 勾选 <code>gist</code> 权限<br>
+                                3. 复制 Token 并粘贴到下方输入框
+                            </p>
+                            <a href="https://github.com/settings/tokens/new?scopes=gist&description=Leeks%20Stock%20Viewer" target="_blank" style="display: block; margin-bottom: 15px;">
+                                <button class="toolbar-btn">获取 GitHub Token</button>
+                            </a>
+                            <input type="password" id="githubTokenInput" placeholder="粘贴 GitHub Token" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px;">
+                            <button class="toolbar-btn active" onclick="saveGitHubToken()" style="width: 100%;">保存 Token</button>
+                        </div>
+                    </div>
+
+                    <!-- 已配置状态 -->
+                    <div id="configured" style="display: none;">
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 10px;">同步设置</h4>
+                            <label style="display: block; margin-bottom: 15px;">
+                                <input type="checkbox" id="autoSyncCheckbox" onchange="toggleAutoSync()">
+                                自动同步（数据变化时自动备份）
+                            </label>
+                            <div id="lastSyncTime" style="font-size: 12px; color: #666; margin-bottom: 15px;">
+                                上次同步: --
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                            <button class="toolbar-btn active" onclick="backupToGitHub(this)" style="flex: 1;">立即备份</button>
+                            <button class="toolbar-btn" onclick="restoreFromGitHub(this)" style="flex: 1;">恢复数据</button>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 10px;">Gist 信息</h4>
+                            <div id="gistInfo" style="font-size: 12px; color: #666;"></div>
+                        </div>
+
+                        <button class="toolbar-btn" onclick="clearGitHubToken()" style="color: #e74c3c; width: 100%;">清除配置</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     <script>
         // 股票数据存储
         let stocks = JSON.parse(localStorage.getItem('leeks_stocks') || '[]');
@@ -1038,6 +1095,13 @@
         let currentFilter = 'all';
         let searchText = '';
 
+        // 云端同步配置
+        const GIST_TOKEN_KEY = 'leeks_gist_token';
+        const GIST_ID_KEY = 'leeks_gist_id';
+        const GIST_OWNER_KEY = 'leeks_gist_owner';
+        const AUTO_SYNC_KEY = 'leeks_auto_sync';
+        let autoSyncEnabled = localStorage.getItem(AUTO_SYNC_KEY) === 'true';
+
         // 列配置
         const columnConfig = [
             { key: 'code', name: '编码', default: true },
@@ -1045,6 +1109,8 @@
             { key: 'now', name: '当前价', default: true },
             { key: 'change', name: '涨跌', default: true },
             { key: 'changePercent', name: '涨跌幅', default: true },
+            { key: 'volume', name: '成交量', default: true },
+            { key: 'amount', name: '成交额', default: false },
             { key: 'time', name: '更新时间', default: false },
             { key: 'max', name: '最高价', default: false },
             { key: 'min', name: '最低价', default: false },
@@ -1062,9 +1128,9 @@
             { key: 'riskRewardRatio', name: '盈亏比', default: true }
         ];
 
-        // 确保 prediction 列在可见列中（兼容旧数据）
+        // 确保 prediction 和成交量相关列在可见列中（兼容旧数据）
         let visibleColumns = JSON.parse(localStorage.getItem('leeks_visible_columns') || JSON.stringify(columnConfig.map(c => c.key)));
-        if (!visibleColumns.includes('prediction')) {
+        if (!visibleColumns.includes('prediction') || !visibleColumns.includes('volume')) {
             visibleColumns = columnConfig.filter(c => c.default).map(c => c.key);
         }
 
@@ -1113,11 +1179,19 @@
 
             // 初始化过滤按钮状态
             document.getElementById('filterAll').classList.add('active');
+
+            // 初始化云端同步状态
+            updateCloudSyncUI();
         });
 
         // 保存股票列表到 localStorage
         function saveStocks() {
             localStorage.setItem('leeks_stocks', JSON.stringify(stocks));
+
+            // 如果开启自动同步，触发备份（不传入按钮元素，因为不是手动点击）
+            if (autoSyncEnabled) {
+                backupToGitHub(null);
+            }
         }
 
         // 渲染股票表格
@@ -1176,7 +1250,7 @@
                 }
 
                 // 数值字段转换为数字比较
-                if (['now', 'change', 'changePercent', 'max', 'min', 'cost', 'bonds', 'marketValue', 'incomePercent', 'income', 'targetPrice', 'stopLoss', 'yieldToTarget', 'yieldToStop', 'riskRewardRatio'].includes(sortColumn)) {
+                if (['now', 'change', 'changePercent', 'max', 'min', 'cost', 'bonds', 'marketValue', 'incomePercent', 'income', 'targetPrice', 'stopLoss', 'yieldToTarget', 'yieldToStop', 'riskRewardRatio', 'volume', 'amount'].includes(sortColumn)) {
                     valA = parseFloat(valA) || 0;
                     valB = parseFloat(valB) || 0;
                 }
@@ -1348,6 +1422,8 @@
                 now: `<td class="${stock.changePercent >= 0 ? 'red' : stock.changePercent < 0 ? 'green' : 'gray'}">${stock.now || '--'}</td>`,
                 change: `<td class="${stock.changePercent >= 0 ? 'red' : stock.changePercent < 0 ? 'green' : 'gray'}">${formatChange(stock.change)}</td>`,
                 changePercent: `<td class="${stock.changePercent >= 0 ? 'red' : stock.changePercent < 0 ? 'green' : 'gray'}">${formatChangePercent(stock.changePercent)}</td>`,
+                volume: formatVolume(stock.volume, stock.changePercent, stock.code),
+                amount: formatAmount(stock.amount),
                 time: `<td>${formatTime(stock.time)}</td>`,
                 max: `<td>${stock.max || '--'}</td>`,
                 min: `<td>${stock.min || '--'}</td>`,
@@ -1454,6 +1530,66 @@
             if (!value) return '--';
             value = parseFloat(value);
             return value >= 0 ? `+${value.toFixed(2)}` : value.toFixed(2);
+        }
+
+        // 格式化成交量（手），根据涨跌幅和成交量的变化显示颜色
+        function formatVolume(volume, changePercent, code) {
+            if (!volume || volume === '--') return '<td>--</td>';
+
+            const volumeNum = parseFloat(volume);
+            const change = parseFloat(changePercent) || 0;
+            let colorClass = 'gray';
+            let tooltip = '';
+
+            // 放量判断（大幅降低阈值，更容易看到颜色效果）
+            // 1. 大幅波动
+            if (Math.abs(change) > 3) {
+                colorClass = change > 0 ? 'red' : 'green';
+                tooltip = `涨跌幅${change.toFixed(2)}% > 3%，${change > 0 ? '大幅上涨' : '大幅下跌'}`;
+            }
+            // 2. 中等波动且有一定成交量
+            else if (Math.abs(change) > 1.5 && volumeNum > 1000) {
+                colorClass = change > 0 ? 'red' : 'green';
+                tooltip = `涨跌幅${change.toFixed(2)}% > 1.5%，成交量${volumeNum}手 > 1000手`;
+            }
+            // 3. 小幅波动但成交量较大
+            else if (Math.abs(change) > 0.5 && volumeNum > 5000) {
+                colorClass = change > 0 ? 'red' : 'green';
+                tooltip = `涨跌幅${change.toFixed(2)}% > 0.5%，成交量${volumeNum}手 > 5000手`;
+            }
+            // 4. 正常波动
+            else if (Math.abs(change) > 0.1) {
+                colorClass = change > 0 ? 'red' : 'green';
+                tooltip = `涨跌幅${change.toFixed(2)}%，正常波动`;
+            }
+            // 5. 平盘或波动极小
+            else {
+                tooltip = `涨跌幅${change.toFixed(2)}%，波动极小`;
+            }
+
+            // 格式化成交量（万手显示）
+            let displayVolume = volumeNum;
+            if (volumeNum >= 10000) {
+                displayVolume = (volumeNum / 10000).toFixed(2) + '万';
+            }
+
+            return `<td class="${colorClass} price-tooltip" data-tooltip="${tooltip}">${displayVolume}</td>`;
+        }
+
+        // 格式化成交额（万元）
+        function formatAmount(amount) {
+            if (!amount || amount === '--') return '<td>--</td>';
+
+            const amountNum = parseFloat(amount);
+            let displayAmount = amountNum;
+
+            if (amountNum >= 10000) {
+                displayAmount = (amountNum / 10000).toFixed(2) + '亿';
+            } else if (amountNum >= 1) {
+                displayAmount = amountNum.toFixed(2) + '万';
+            }
+
+            return `<td>${displayAmount}</td>`;
         }
 
         // 拼音转换（简化版）
@@ -1625,6 +1761,16 @@
                     stock.time = values[30] || '--';
                     stock.max = values[33] || '--';
                     stock.min = values[34] || '--';
+
+                    // 成交量数据
+                    // values[36]: 成交量（手）
+                    // values[37]: 成交额（万元）
+                    stock.volume = values[36] || '--';
+                    stock.amount = values[37] || '--';
+
+                    // 计算换手率（需要流通股本，暂无法获取，设为'--'）
+                    // 换手率 = 成交量(手) / 流通股本(万股) * 100
+                    stock.turnover = '--';
 
                     // 计算收益
                     if (stock.cost && stock.cost !== '--' && parseFloat(stock.cost) > 0) {
@@ -1959,6 +2105,268 @@
                 showToast(stealthMode ? '隐蔽模式已开启' : '隐蔽模式已关闭');
             }
         });
+
+        // ==================== 云端同步功能 ====================
+
+        // 打开云端同步弹窗
+        function openCloudSync() {
+            document.getElementById('cloudSyncPopup').style.display = 'flex';
+            updateCloudSyncUI();
+        }
+
+        // 关闭云端同步弹窗
+        function closeCloudSync(event) {
+            if (!event || event.target.id === 'cloudSyncPopup') {
+                document.getElementById('cloudSyncPopup').style.display = 'none';
+            }
+        }
+
+        // 更新云端同步UI状态
+        function updateCloudSyncUI() {
+            const token = localStorage.getItem(GIST_TOKEN_KEY);
+            const notConfigured = document.getElementById('notConfigured');
+            const configured = document.getElementById('configured');
+
+            if (token) {
+                notConfigured.style.display = 'none';
+                configured.style.display = 'block';
+                document.getElementById('autoSyncCheckbox').checked = autoSyncEnabled;
+
+                // 更新上次同步时间
+                const lastSync = localStorage.getItem('leeks_last_sync');
+                if (lastSync) {
+                    const date = new Date(parseInt(lastSync));
+                    document.getElementById('lastSyncTime').textContent = '上次同步: ' + date.toLocaleString();
+                } else {
+                    document.getElementById('lastSyncTime').textContent = '上次同步: --';
+                }
+
+                        // 显示 Gist 信息
+                const gistId = localStorage.getItem(GIST_ID_KEY);
+                const gistOwner = localStorage.getItem(GIST_OWNER_KEY);
+                if (gistId) {
+                    const gistUrl = gistOwner
+                        ? `https://gist.github.com/${gistOwner}/${gistId}`
+                        : `https://gist.github.com/${gistId}`;
+                    document.getElementById('gistInfo').innerHTML = `
+                        Gist ID: ${gistId}<br>
+                        <a href="${gistUrl}" target="_blank">查看 Gist</a>
+                    `;
+                }
+            } else {
+                notConfigured.style.display = 'block';
+                configured.style.display = 'none';
+            }
+        }
+
+        // 保存 GitHub Token
+        function saveGitHubToken() {
+            const token = document.getElementById('githubTokenInput').value.trim();
+            if (!token) {
+                alert('请输入 GitHub Token');
+                return;
+            }
+            localStorage.setItem(GIST_TOKEN_KEY, token);
+            showToast('Token 保存成功！');
+            updateCloudSyncUI();
+        }
+
+        // 清除 GitHub Token
+        function clearGitHubToken() {
+            if (confirm('确定要清除云端同步配置吗？')) {
+                localStorage.removeItem(GIST_TOKEN_KEY);
+                localStorage.removeItem(GIST_ID_KEY);
+                localStorage.removeItem(GIST_OWNER_KEY);
+                localStorage.removeItem(AUTO_SYNC_KEY);
+                autoSyncEnabled = false;
+                showToast('配置已清除');
+                updateCloudSyncUI();
+            }
+        }
+
+        // 切换自动同步
+        function toggleAutoSync() {
+            autoSyncEnabled = document.getElementById('autoSyncCheckbox').checked;
+            localStorage.setItem(AUTO_SYNC_KEY, autoSyncEnabled);
+            showToast(autoSyncEnabled ? '自动同步已开启' : '自动同步已关闭');
+        }
+
+        // 备份到 GitHub
+        async function backupToGitHub(button) {
+            const token = localStorage.getItem(GIST_TOKEN_KEY);
+            if (!token) {
+                showToast('请先配置 GitHub Token');
+                return;
+            }
+
+            // 获取触发按钮元素
+            const btn = button || (event && event.target);
+
+            try {
+                if (btn) btn.disabled = true;
+                if (btn) btn.textContent = '备份中...';
+
+                // 准备备份数据
+                const backupData = {
+                    version: '1.0',
+                    timestamp: Date.now(),
+                    stocks: stocks,
+                    settings: {
+                        autoRefreshEnabled: autoRefreshEnabled,
+                        stealthMode: stealthMode,
+                        sortColumn: sortColumn,
+                        sortDirection: sortDirection,
+                        visibleColumns: visibleColumns
+                    }
+                };
+
+                const gistId = localStorage.getItem(GIST_ID_KEY);
+
+                if (gistId) {
+                    // 更新现有 Gist
+                    const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        },
+                        body: JSON.stringify({
+                            description: 'Leeks 股票配置备份',
+                            files: {
+                                'leeks-config.json': {
+                                    content: JSON.stringify(backupData, null, 2)
+                                }
+                            }
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.message || '备份失败');
+                    }
+                } else {
+                    // 创建新 Gist
+                    const response = await fetch('https://api.github.com/gists', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        },
+                        body: JSON.stringify({
+                            description: 'Leeks 股票配置备份',
+                            public: false,
+                            files: {
+                                'leeks-config.json': {
+                                    content: JSON.stringify(backupData, null, 2)
+                                }
+                            }
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.message || '备份失败');
+                    }
+
+                    const result = await response.json();
+                    localStorage.setItem(GIST_ID_KEY, result.id);
+                    // 保存 owner 信息用于构建正确的 Gist 链接
+                    if (result.owner && result.owner.login) {
+                        localStorage.setItem(GIST_OWNER_KEY, result.owner.login);
+                    }
+                }
+
+                // 更新同步时间
+                localStorage.setItem('leeks_last_sync', Date.now().toString());
+
+                showToast('备份成功！');
+                updateCloudSyncUI();
+            } catch (error) {
+                console.error('备份失败:', error);
+                showToast('备份失败: ' + error.message);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '立即备份';
+                }
+            }
+        }
+
+        // 从 GitHub 恢复数据
+        async function restoreFromGitHub(button) {
+            const token = localStorage.getItem(GIST_TOKEN_KEY);
+            const gistId = localStorage.getItem(GIST_ID_KEY);
+
+            if (!token || !gistId) {
+                showToast('未找到云端备份记录');
+                return;
+            }
+
+            if (!confirm('确定要从云端恢复数据吗？这将覆盖当前数据！')) {
+                return;
+            }
+
+            // 获取触发按钮元素
+            const btn = button || (event && event.target);
+
+            try {
+                if (btn) btn.disabled = true;
+                if (btn) btn.textContent = '恢复中...';
+
+                const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || '恢复失败');
+                }
+
+                const gist = await response.json();
+                const content = gist.files['leeks-config.json']?.content;
+
+                if (!content) {
+                    throw new Error('Gist 中找不到配置文件');
+                }
+
+                const backupData = JSON.parse(content);
+
+                // 恢复数据
+                stocks = backupData.stocks || [];
+                if (backupData.settings) {
+                    autoRefreshEnabled = backupData.settings.autoRefreshEnabled ?? autoRefreshEnabled;
+                    stealthMode = backupData.settings.stealthMode ?? stealthMode;
+                    sortColumn = backupData.settings.sortColumn ?? sortColumn;
+                    sortDirection = backupData.settings.sortDirection ?? sortDirection;
+                    visibleColumns = backupData.settings.visibleColumns ?? visibleColumns;
+
+                    // 保存设置到 localStorage
+                    localStorage.setItem('leeks_auto_refresh', autoRefreshEnabled);
+                    localStorage.setItem('leeks_stealth_mode', stealthMode);
+                    localStorage.setItem('leeks_sort_column', sortColumn);
+                    localStorage.setItem('leeks_sort_direction', sortDirection);
+                    localStorage.setItem('leeks_visible_columns', JSON.stringify(visibleColumns));
+                }
+
+                saveStocks();
+                renderStocks();
+                applyStealthMode();
+                updateAutoRefreshButton();
+
+                showToast('恢复成功！已恢复 ' + stocks.length + ' 只股票');
+            } catch (error) {
+                console.error('恢复失败:', error);
+                showToast('恢复失败: ' + error.message);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '恢复数据';
+                }
+            }
+        }
 
         // 显示提示信息
         function showToast(message) {
