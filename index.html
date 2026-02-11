@@ -882,7 +882,21 @@
                 <button class="toolbar-btn" onclick="openColumnSettings()">列设置</button>
             </div>
             <div class="toolbar-right">
+                <span id="totalMarketValue" style="font-size: 12px; color: #7f8c8d; margin-right: 15px;">总市值: --</span>
+                <span id="totalIncome" style="font-size: 12px; color: #7f8c8d; margin-right: 15px;">总收益: --</span>
                 <span style="font-size: 12px; color: #7f8c8d;">刷新: <span id="refreshInterval">10</span>s</span>
+            </div>
+        </div>
+
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <input type="text" id="searchInput" placeholder="搜索股票名称或代码..." oninput="filterStocks()"
+                       style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 13px; width: 200px;">
+                <span style="font-size: 12px; color: #7f8c8d; margin-left: 10px;">快速筛选: </span>
+                <button class="toolbar-btn" onclick="filterByStatus('all')" id="filterAll">全部</button>
+                <button class="toolbar-btn" onclick="filterByStatus('profit')" id="filterProfit">盈利</button>
+                <button class="toolbar-btn" onclick="filterByStatus('loss')" id="filterLoss">亏损</button>
+                <button class="toolbar-btn" onclick="filterByStatus('target')" id="filterTarget">已达目标</button>
             </div>
         </div>
 
@@ -905,6 +919,7 @@
                         <th>收益</th>
                         <th onclick="sortTable('targetPrice')">目标价</th>
                         <th onclick="sortTable('stopLoss')">止损价</th>
+                        <th>预测趋势</th>
                         <th>状态</th>
                         <th onclick="sortTable('yieldToTarget')">目标收益</th>
                         <th onclick="sortTable('yieldToStop')">止损损失</th>
@@ -1020,6 +1035,8 @@
         let sortDirection = localStorage.getItem('leeks_sort_direction') || 'asc';
         let refreshTimer = null;
         let currentChartStock = null;
+        let currentFilter = 'all';
+        let searchText = '';
 
         // 列配置
         const columnConfig = [
@@ -1034,6 +1051,7 @@
             { key: 'cost', name: '成本价', default: true },
             { key: 'bonds', name: '持仓', default: true },
             { key: 'marketValue', name: '持仓市值', default: true },
+            { key: 'prediction', name: '预测趋势', default: true },
             { key: 'incomePercent', name: '收益率', default: true },
             { key: 'income', name: '收益', default: true },
             { key: 'targetPrice', name: '目标价', default: true },
@@ -1044,7 +1062,11 @@
             { key: 'riskRewardRatio', name: '盈亏比', default: true }
         ];
 
+        // 确保 prediction 列在可见列中（兼容旧数据）
         let visibleColumns = JSON.parse(localStorage.getItem('leeks_visible_columns') || JSON.stringify(columnConfig.map(c => c.key)));
+        if (!visibleColumns.includes('prediction')) {
+            visibleColumns = columnConfig.filter(c => c.default).map(c => c.key);
+        }
 
         // 初始化
         document.addEventListener('DOMContentLoaded', () => {
@@ -1088,6 +1110,9 @@
                     }
                 });
             });
+
+            // 初始化过滤按钮状态
+            document.getElementById('filterAll').classList.add('active');
         });
 
         // 保存股票列表到 localStorage
@@ -1100,12 +1125,36 @@
             const tbody = document.getElementById('stockTableBody');
             const thead = document.querySelector('.stock-table thead tr');
 
-            if (stocks.length === 0) {
+            // 应用过滤
+            let filteredStocks = stocks.filter(stock => {
+                // 状态过滤
+                if (currentFilter !== 'all') {
+                    if (currentFilter === 'profit' && (!stock.incomePercent || parseFloat(stock.incomePercent) <= 0)) return false;
+                    if (currentFilter === 'loss' && (!stock.incomePercent || parseFloat(stock.incomePercent) >= 0)) return false;
+                    if (currentFilter === 'target') {
+                        const now = parseFloat(stock.now);
+                        const targetPrice = parseFloat(stock.targetPrice);
+                        if (!now || !targetPrice || now < targetPrice) return false;
+                    }
+                }
+
+                // 搜索过滤
+                if (searchText) {
+                    const search = searchText.toLowerCase();
+                    if (!stock.code.toLowerCase().includes(search) && !stock.name.toLowerCase().includes(search)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+
+            if (filteredStocks.length === 0) {
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="${visibleColumns.length + 1}" class="empty-state">
                             <div class="empty-state-icon">📈</div>
-                            <div class="empty-state-text">暂无股票，请添加股票代码</div>
+                            <div class="empty-state-text">${stocks.length === 0 ? '暂无股票，请添加股票代码' : '没有匹配的股票'}</div>
                         </td>
                     </tr>
                 `;
@@ -1116,7 +1165,7 @@
             thead.innerHTML = renderTableHeader();
 
             // 排序
-            stocks.sort((a, b) => {
+            filteredStocks.sort((a, b) => {
                 let valA = a[sortColumn] || '';
                 let valB = b[sortColumn] || '';
 
@@ -1147,9 +1196,12 @@
                 }
             });
 
-            tbody.innerHTML = stocks.map(stock => {
+            tbody.innerHTML = filteredStocks.map(stock => {
                 return `<tr data-code="${stock.code}" ondblclick="showChart('${stock.code}', 'min')" oncontextmenu="showContextMenu(event, '${stock.code}')">${renderTableCells(stock)}</tr>`;
             }).join('');
+
+            // 更新统计
+            updateTotalStats();
         }
 
         // 渲染表头
@@ -1237,6 +1289,58 @@
                 marketValue = (now * bonds).toFixed(2);
             }
 
+            // 简单的涨跌预测（基于涨跌幅和价格位置）
+            let prediction = '--';
+            let predictionClass = 'gray';
+            let predictionRule = '';
+            if (!isNaN(now) && !isNaN(stock.max) && !isNaN(stock.min) && !isNaN(stock.changePercent)) {
+                const max = parseFloat(stock.max);
+                const min = parseFloat(stock.min);
+                const changePercent = parseFloat(stock.changePercent);
+
+                // 计算价格位置
+                const pricePosition = (now - min) / (max - min);
+
+                // 结合涨跌幅和价格位置进行预测
+                if (changePercent > 3 && pricePosition > 0.7) {
+                    prediction = '⚠️ 冲高回落';
+                    predictionClass = 'gray';
+                    predictionRule = `涨幅${changePercent.toFixed(2)}% > 3%，价格位置${(pricePosition * 100).toFixed(0)}% > 70%`;
+                } else if (changePercent > 2 && pricePosition > 0.6) {
+                    prediction = '📈 强势';
+                    predictionClass = 'red';
+                    predictionRule = `涨幅${changePercent.toFixed(2)}% > 2%，价格位置${(pricePosition * 100).toFixed(0)}% > 60%`;
+                } else if (changePercent > 0 && pricePosition > 0.5) {
+                    prediction = '↗️ 上涨';
+                    predictionClass = 'red';
+                    predictionRule = `涨幅${changePercent.toFixed(2)}%，价格位置${(pricePosition * 100).toFixed(0)}% > 50%`;
+                } else if (changePercent < -2 && pricePosition < 0.4) {
+                    prediction = '⚠️ 弱势';
+                    predictionClass = 'green';
+                    predictionRule = `跌幅${Math.abs(changePercent).toFixed(2)}% > 2%，价格位置${(pricePosition * 100).toFixed(0)}% < 40%`;
+                } else if (changePercent < 0 && pricePosition < 0.5) {
+                    prediction = '↘️ 下跌';
+                    predictionClass = 'green';
+                    predictionRule = `跌幅${Math.abs(changePercent).toFixed(2)}%，价格位置${(pricePosition * 100).toFixed(0)}% < 50%`;
+                } else if (Math.abs(changePercent) < 1) {
+                    prediction = '➡️ 震荡';
+                    predictionClass = 'gray';
+                    predictionRule = `涨跌幅${Math.abs(changePercent).toFixed(2)}% < 1%`;
+                } else if (pricePosition > 0.5 && changePercent > 0) {
+                    prediction = '📈 上涨';
+                    predictionClass = 'red';
+                    predictionRule = `价格位置${(pricePosition * 100).toFixed(0)}% > 50%，涨幅${changePercent.toFixed(2)}%`;
+                } else if (pricePosition < 0.5 && changePercent < 0) {
+                    prediction = '📉 下跌';
+                    predictionClass = 'green';
+                    predictionRule = `价格位置${(pricePosition * 100).toFixed(0)}% < 50%，跌幅${Math.abs(changePercent).toFixed(2)}%`;
+                } else {
+                    prediction = '➡️ 震荡';
+                    predictionClass = 'gray';
+                    predictionRule = `价格位置${(pricePosition * 100).toFixed(0)}%，涨跌幅${changePercent.toFixed(2)}%`;
+                }
+            }
+
             // 单元格映射
             const cellMap = {
                 code: `<td>${stock.code}</td>`,
@@ -1250,6 +1354,7 @@
                 cost: `<td class="editable" onclick="event.stopPropagation(); openEditPopup('${stock.code}')">${stock.cost || '--'}</td>`,
                 bonds: `<td class="editable" onclick="event.stopPropagation(); openEditPopup('${stock.code}')">${stock.bonds || '--'}</td>`,
                 marketValue: `<td class="price-tooltip" data-tooltip="当前价 × 持仓数量">${marketValue}</td>`,
+                prediction: `<td class="${predictionClass} price-tooltip" data-tooltip="${predictionRule || '数据不足，无法预测'}">${prediction}</td>`,
                 incomePercent: `<td class="${stock.incomePercent >= 0 ? 'red' : stock.incomePercent < 0 ? 'green' : 'gray'}">${formatChangePercent(stock.incomePercent)}</td>`,
                 income: `<td class="${stock.income >= 0 ? 'red' : stock.income < 0 ? 'green' : 'gray'}">${formatIncome(stock.income)}</td>`,
                 targetPrice: `<td class="editable price-tooltip" onclick="event.stopPropagation(); openEditPopup('${stock.code}')"
@@ -1266,6 +1371,62 @@
                 .filter(col => visibleColumns.includes(col.key))
                 .map(col => cellMap[col.key] || '')
                 .join('') + '<td><button class="toolbar-btn delete-btn" onclick="deleteStock(\'' + stock.code + '\', event)">删除</button></td>';
+        }
+
+        // 更新总资产统计
+        function updateTotalStats() {
+            let totalMarketValue = 0;
+            let totalIncome = 0;
+            let hasData = false;
+
+            stocks.forEach(stock => {
+                const now = parseFloat(stock.now);
+                const bonds = stock.bonds && stock.bonds !== '--' ? parseFloat(stock.bonds) : 0;
+                const income = stock.income && stock.income !== '--' ? parseFloat(stock.income) : 0;
+
+                if (!isNaN(now) && bonds > 0) {
+                    totalMarketValue += now * bonds;
+                    hasData = true;
+                }
+
+                if (!isNaN(income)) {
+                    totalIncome += income;
+                }
+            });
+
+            const marketValueEl = document.getElementById('totalMarketValue');
+            const incomeEl = document.getElementById('totalIncome');
+
+            if (hasData) {
+                marketValueEl.textContent = `总市值: ${totalMarketValue.toFixed(2)}`;
+                marketValueEl.className = totalIncome >= 0 ? 'red' : 'green';
+                incomeEl.textContent = `总收益: ${totalIncome >= 0 ? '+' : ''}${totalIncome.toFixed(2)}`;
+                incomeEl.className = totalIncome >= 0 ? 'red' : 'green';
+            } else {
+                marketValueEl.textContent = '总市值: --';
+                marketValueEl.className = '';
+                incomeEl.textContent = '总收益: --';
+                incomeEl.className = '';
+            }
+        }
+
+        // 搜索过滤
+        function filterStocks() {
+            searchText = document.getElementById('searchInput').value.trim();
+            renderStocks();
+        }
+
+        // 状态过滤
+        function filterByStatus(status) {
+            currentFilter = status;
+
+            // 更新按钮状态
+            document.querySelectorAll('#filterAll, #filterProfit, #filterLoss, #filterTarget').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById('filter' + status.charAt(0).toUpperCase() + status.slice(1)).classList.add('active');
+
+            renderStocks();
         }
 
         // 格式化涨跌
@@ -1403,6 +1564,42 @@
             // 更新刷新时间
             const now = new Date();
             document.getElementById('refreshInfo').textContent = `最后刷新: ${now.toLocaleTimeString()}`;
+
+            // 更新总资产统计
+            updateTotalStats();
+
+            // 价格提醒
+            checkPriceAlerts();
+        }
+
+        // 价格提醒检查
+        function checkPriceAlerts() {
+            stocks.forEach(stock => {
+                const now = parseFloat(stock.now);
+                const targetPrice = parseFloat(stock.targetPrice);
+                const stopLoss = parseFloat(stock.stopLoss);
+
+                // 检查是否达到目标价
+                if (!isNaN(now) && !isNaN(targetPrice) && targetPrice > 0) {
+                    if (now >= targetPrice && !stock.alertedTarget) {
+                        showToast(`${stock.name} 已达到目标价 ${targetPrice}！`);
+                        stock.alertedTarget = true;
+                    } else if (now < targetPrice * 0.99) {
+                        stock.alertedTarget = false;
+                    }
+                }
+
+                // 检查是否触发止损
+                if (!isNaN(now) && !isNaN(stopLoss) && stopLoss > 0) {
+                    if (now <= stopLoss && !stock.alertedStop) {
+                        showToast(`${stock.name} 已触发止损价 ${stopLoss}！`);
+                        stock.alertedStop = true;
+                    } else if (now > stopLoss * 1.01) {
+                        stock.alertedStop = false;
+                    }
+                }
+            });
+            saveStocks();
         }
 
         // 解析股票数据
