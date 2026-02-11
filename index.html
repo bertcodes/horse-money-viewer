@@ -855,7 +855,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>股票行情查看器</h1>
+            <h1>马钱行情</h1>
             <div>
                 <button class="refresh-btn" onclick="refreshStocks()">
                     <span class="auto-refresh-indicator" id="autoRefreshIndicator"></span>
@@ -900,6 +900,7 @@
                         <th onclick="sortTable('min')">最低价</th>
                         <th>成本价</th>
                         <th>持仓</th>
+                        <th onclick="sortTable('marketValue')">持仓市值</th>
                         <th>收益率</th>
                         <th>收益</th>
                         <th onclick="sortTable('targetPrice')">目标价</th>
@@ -1032,6 +1033,7 @@
             { key: 'min', name: '最低价', default: false },
             { key: 'cost', name: '成本价', default: true },
             { key: 'bonds', name: '持仓', default: true },
+            { key: 'marketValue', name: '持仓市值', default: true },
             { key: 'incomePercent', name: '收益率', default: true },
             { key: 'income', name: '收益', default: true },
             { key: 'targetPrice', name: '目标价', default: true },
@@ -1125,7 +1127,7 @@
                 }
 
                 // 数值字段转换为数字比较
-                if (['now', 'change', 'changePercent', 'max', 'min', 'cost', 'bonds', 'incomePercent', 'income', 'targetPrice', 'stopLoss', 'yieldToTarget', 'yieldToStop', 'riskRewardRatio'].includes(sortColumn)) {
+                if (['now', 'change', 'changePercent', 'max', 'min', 'cost', 'bonds', 'marketValue', 'incomePercent', 'income', 'targetPrice', 'stopLoss', 'yieldToTarget', 'yieldToStop', 'riskRewardRatio'].includes(sortColumn)) {
                     valA = parseFloat(valA) || 0;
                     valB = parseFloat(valB) || 0;
                 }
@@ -1228,6 +1230,13 @@
                 statusText = '持有中';
             }
 
+            // 计算持仓市值
+            let marketValue = '--';
+            if (!isNaN(now) && stock.bonds && stock.bonds !== '--') {
+                const bonds = parseFloat(stock.bonds);
+                marketValue = (now * bonds).toFixed(2);
+            }
+
             // 单元格映射
             const cellMap = {
                 code: `<td>${stock.code}</td>`,
@@ -1240,6 +1249,7 @@
                 min: `<td>${stock.min || '--'}</td>`,
                 cost: `<td class="editable" onclick="event.stopPropagation(); openEditPopup('${stock.code}')">${stock.cost || '--'}</td>`,
                 bonds: `<td class="editable" onclick="event.stopPropagation(); openEditPopup('${stock.code}')">${stock.bonds || '--'}</td>`,
+                marketValue: `<td class="price-tooltip" data-tooltip="当前价 × 持仓数量">${marketValue}</td>`,
                 incomePercent: `<td class="${stock.incomePercent >= 0 ? 'red' : stock.incomePercent < 0 ? 'green' : 'gray'}">${formatChangePercent(stock.incomePercent)}</td>`,
                 income: `<td class="${stock.income >= 0 ? 'red' : stock.income < 0 ? 'green' : 'gray'}">${formatIncome(stock.income)}</td>`,
                 targetPrice: `<td class="editable price-tooltip" onclick="event.stopPropagation(); openEditPopup('${stock.code}')"
@@ -1675,7 +1685,7 @@
             if (stealthMode) {
                 pageTitle.textContent = '项目文档 - 工作资料';
             } else {
-                pageTitle.textContent = '股票行情查看器 - Leeks';
+                pageTitle.textContent = '马钱查看器 - Leeks';
             }
         }
 
