@@ -2269,11 +2269,20 @@
                     }
 
                     const result = await response.json();
-                    localStorage.setItem(GIST_ID_KEY, result.id);
+                    const newGistId = result.id;
+
+                    if (!newGistId) {
+                        throw new Error('创建 Gist 失败，未返回 ID');
+                    }
+
+                    localStorage.setItem(GIST_ID_KEY, newGistId);
+
                     // 保存 owner 信息用于构建正确的 Gist 链接
                     if (result.owner && result.owner.login) {
                         localStorage.setItem(GIST_OWNER_KEY, result.owner.login);
                     }
+
+                    console.log('Gist 创建成功:', newGistId);
                 }
 
                 // 更新同步时间
@@ -2297,8 +2306,16 @@
             const token = localStorage.getItem(GIST_TOKEN_KEY);
             const gistId = localStorage.getItem(GIST_ID_KEY);
 
-            if (!token || !gistId) {
-                showToast('未找到云端备份记录');
+            console.log('恢复数据 - Token:', token ? '已配置' : '未配置');
+            console.log('恢复数据 - Gist ID:', gistId || '未找到');
+
+            if (!token) {
+                showToast('请先配置 GitHub Token');
+                return;
+            }
+
+            if (!gistId) {
+                showToast('未找到云端备份，请先点击"立即备份"创建备份');
                 return;
             }
 
