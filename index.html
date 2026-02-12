@@ -179,54 +179,101 @@
         /* 移动端优化 */
         @media (max-width: 768px) {
             .container {
-                margin: 10px auto;
-                padding: 0 10px;
+                margin: 5px auto;
+                padding: 0 5px;
             }
 
             .header {
-                flex-direction: column;
-                gap: 10px;
-                padding: 10px 15px;
+                flex-direction: row;
+                gap: 5px;
+                padding: 8px 10px;
             }
 
             .header h1 {
-                font-size: 18px;
+                font-size: 16px;
+            }
+
+            .refresh-btn {
+                padding: 5px 12px;
+                font-size: 12px;
+            }
+
+            .refresh-info {
+                display: none;
             }
 
             .stock-input {
-                flex-direction: column;
+                flex-direction: row;
+                padding: 8px 10px;
+                gap: 5px;
             }
 
             .stock-input input {
-                width: 100%;
+                flex: 1;
+                font-size: 12px;
+                padding: 6px 8px;
+            }
+
+            .add-btn {
+                padding: 6px 12px;
+                font-size: 12px;
             }
 
             .toolbar {
                 flex-direction: column;
-                gap: 10px;
-                padding: 10px;
+                gap: 5px;
+                padding: 8px 10px;
             }
 
             .toolbar-left,
             .toolbar-right {
                 flex-wrap: wrap;
-                justify-content: center;
+                justify-content: flex-start;
+                align-items: center;
+                gap: 5px;
+            }
+
+            .toolbar-btn {
+                padding: 4px 10px;
+                font-size: 11px;
+                white-space: nowrap;
+            }
+
+            #searchInput {
+                width: 140px !important;
+                font-size: 12px !important;
+                padding: 4px 8px !important;
+            }
+
+            #filterSelect {
+                font-size: 11px !important;
+                padding: 4px 8px !important;
+            }
+
+            .toolbar-right span {
+                font-size: 10px !important;
+            }
+
+            #refreshIntervalInput {
+                width: 40px !important;
+                font-size: 11px !important;
+                padding: 2px 4px !important;
             }
 
             .stock-table th {
-                padding: 8px 6px;
-                font-size: 10px;
+                padding: 5px 4px;
+                font-size: 9px;
             }
 
             .stock-table td {
-                padding: 6px 6px;
-                font-size: 11px;
+                padding: 4px 3px;
+                font-size: 10px;
             }
 
             .price-status {
-                min-width: 60px;
-                font-size: 10px;
-                padding: 1px 6px;
+                min-width: 50px;
+                font-size: 9px;
+                padding: 1px 4px;
             }
 
             .chart-container {
@@ -246,20 +293,28 @@
         /* 超小屏幕 */
         @media (max-width: 480px) {
             .header h1 {
-                font-size: 16px;
+                font-size: 14px;
+            }
+
+            .header {
+                padding: 5px 8px;
             }
 
             .refresh-btn,
             .add-btn,
             .toolbar-btn {
-                padding: 6px 12px;
-                font-size: 12px;
+                padding: 4px 8px;
+                font-size: 11px;
             }
 
             .stock-table th,
             .stock-table td {
-                padding: 5px 4px;
-                font-size: 10px;
+                padding: 4px 2px;
+                font-size: 9px;
+            }
+
+            #searchInput {
+                width: 100px !important;
             }
         }
 
@@ -877,15 +932,17 @@
         <div class="toolbar">
             <div class="toolbar-left">
                 <button class="toolbar-btn" onclick="clearAllStocks()" style="color: #e74c3c;">清空</button>
-                <button class="toolbar-btn" onclick="exportStocks()">导出</button>
-                <button class="toolbar-btn" onclick="importStocks()">导入</button>
                 <button class="toolbar-btn" onclick="openCloudSync()">云端同步</button>
                 <button class="toolbar-btn" onclick="openColumnSettings()">列设置</button>
             </div>
             <div class="toolbar-right">
                 <span id="totalMarketValue" style="font-size: 12px; color: #7f8c8d; margin-right: 15px;">总市值: --</span>
                 <span id="totalIncome" style="font-size: 12px; color: #7f8c8d; margin-right: 15px;">总收益: --</span>
-                <span style="font-size: 12px; color: #7f8c8d;">刷新: <span id="refreshInterval">10</span>s</span>
+                <span style="font-size: 12px; color: #7f8c8d; margin-right: 5px;">刷新:</span>
+                <input type="number" id="refreshIntervalInput" min="3" max="300" step="1" value="10"
+                       onchange="changeRefreshInterval(this.value)"
+                       style="width: 50px; padding: 2px 5px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px; margin-right: 3px;">
+                <span style="font-size: 12px; color: #7f8c8d;">秒</span>
             </div>
         </div>
 
@@ -894,10 +951,13 @@
                 <input type="text" id="searchInput" placeholder="搜索股票名称或代码..." oninput="filterStocks()"
                        style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 13px; width: 200px;">
                 <span style="font-size: 12px; color: #7f8c8d; margin-left: 10px;">快速筛选: </span>
-                <button class="toolbar-btn" onclick="filterByStatus('all')" id="filterAll">全部</button>
-                <button class="toolbar-btn" onclick="filterByStatus('profit')" id="filterProfit">盈利</button>
-                <button class="toolbar-btn" onclick="filterByStatus('loss')" id="filterLoss">亏损</button>
-                <button class="toolbar-btn" onclick="filterByStatus('target')" id="filterTarget">已达目标</button>
+                <select id="filterSelect" onchange="filterByStatus(this.value)"
+                        style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 13px; cursor: pointer;">
+                    <option value="all">全部</option>
+                    <option value="profit">盈利</option>
+                    <option value="loss">亏损</option>
+                    <option value="target">已达目标</option>
+                </select>
             </div>
         </div>
 
@@ -1099,6 +1159,7 @@
         let currentChartStock = null;
         let currentFilter = 'all';
         let searchText = '';
+        let refreshInterval = parseInt(localStorage.getItem('leeks_refresh_interval')) || 10; // 默认10秒
 
         // 云端同步配置
         const GIST_TOKEN_KEY = 'leeks_gist_token';
@@ -1153,6 +1214,7 @@
 
             applyStealthMode();
             updateAutoRefreshButton();
+            document.getElementById('refreshIntervalInput').value = refreshInterval;
             renderStocks();
             refreshStocks();
 
@@ -1182,9 +1244,6 @@
                 });
             });
 
-            // 初始化过滤按钮状态
-            document.getElementById('filterAll').classList.add('active');
-
             // 初始化云端同步状态
             updateCloudSyncUI();
         });
@@ -1208,8 +1267,13 @@
             let filteredStocks = stocks.filter(stock => {
                 // 状态过滤
                 if (currentFilter !== 'all') {
-                    if (currentFilter === 'profit' && (!stock.incomePercent || parseFloat(stock.incomePercent) <= 0)) return false;
-                    if (currentFilter === 'loss' && (!stock.incomePercent || parseFloat(stock.incomePercent) >= 0)) return false;
+                    // 盈利和亏损筛选只针对有持仓的股票
+                    if (currentFilter === 'profit' || currentFilter === 'loss') {
+                        if (!stock.bonds || stock.bonds === '--' || parseFloat(stock.bonds) <= 0) return false;
+                        if (!stock.incomePercent || stock.incomePercent === '--') return false;
+                        if (currentFilter === 'profit' && parseFloat(stock.incomePercent) <= 0) return false;
+                        if (currentFilter === 'loss' && parseFloat(stock.incomePercent) >= 0) return false;
+                    }
                     if (currentFilter === 'target') {
                         const now = parseFloat(stock.now);
                         const targetPrice = parseFloat(stock.targetPrice);
@@ -1500,13 +1564,6 @@
         // 状态过滤
         function filterByStatus(status) {
             currentFilter = status;
-
-            // 更新按钮状态
-            document.querySelectorAll('#filterAll, #filterProfit, #filterLoss, #filterTarget').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.getElementById('filter' + status.charAt(0).toUpperCase() + status.slice(1)).classList.add('active');
-
             renderStocks();
         }
 
@@ -1995,8 +2052,20 @@
             if (refreshTimer) clearInterval(refreshTimer);
 
             if (autoRefreshEnabled) {
-                refreshTimer = setInterval(refreshStocks, 10000); // 10秒刷新
+                const interval = refreshInterval * 1000;
+                refreshTimer = setInterval(refreshStocks, interval);
             }
+        }
+
+        // 修改刷新间隔
+        function changeRefreshInterval(value) {
+            let interval = parseInt(value);
+            if (isNaN(interval) || interval < 3) interval = 3;
+            if (interval > 300) interval = 300;
+            refreshInterval = interval;
+            localStorage.setItem('leeks_refresh_interval', interval);
+            document.getElementById('refreshIntervalInput').value = interval;
+            startAutoRefresh();
         }
 
         function toggleAutoRefresh() {
