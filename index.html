@@ -905,6 +905,96 @@
             background: #e74c3c;
             animation: none;
         }
+
+        /* 搜索建议下拉框 */
+        .suggestions-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 0 0 5px 5px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            margin-top: 2px;
+        }
+
+        .suggestions-dropdown.active {
+            display: block;
+        }
+
+        .suggestion-item {
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 1px solid #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .suggestion-item:hover {
+            background: #e8f4fd;
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-item:active {
+            background: #d4edf9;
+        }
+
+        .suggestion-code {
+            font-weight: 600;
+            color: #3498db;
+            font-size: 13px;
+            min-width: 80px;
+        }
+
+        .suggestion-name {
+            color: #333;
+            font-size: 14px;
+            flex: 1;
+        }
+
+        .suggestion-loading {
+            padding: 20px;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 13px;
+        }
+
+        .suggestion-no-result {
+            padding: 20px;
+            text-align: center;
+            color: #95a5a6;
+            font-size: 13px;
+        }
+
+        /* 移动端优化下拉框 */
+        @media (max-width: 768px) {
+            .suggestions-dropdown {
+                max-height: 250px;
+            }
+
+            .suggestion-item {
+                padding: 10px 12px;
+            }
+
+            .suggestion-code {
+                font-size: 12px;
+                min-width: 70px;
+            }
+
+            .suggestion-name {
+                font-size: 13px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -921,8 +1011,12 @@
         </div>
 
         <div class="stock-input">
-            <input type="text" id="stockInput" placeholder="输入股票代码，如: sh600519, sz000001（支持 A股、港股 hk、美股 us，不支持指数）"
-                   onkeypress="if(event.key==='Enter') addStock()">
+            <div style="flex: 1; position: relative;">
+                <input type="text" id="stockInput" placeholder="输入股票代码或名称，如: sh600519、贵州茅台"
+                       onkeypress="if(event.key==='Enter') addStock()" oninput="handleStockInput(event)"
+                       autocomplete="off">
+                <div class="suggestions-dropdown" id="suggestionsDropdown"></div>
+            </div>
             <button class="add-btn" onclick="addStock()">添加</button>
             <div style="flex: 1"></div>
             <button class="toolbar-btn" onclick="toggleAutoRefresh()" id="autoRefreshBtn">刷新: 开</button>
@@ -1160,6 +1254,92 @@
         let currentFilter = 'all';
         let searchText = '';
         let refreshInterval = parseInt(localStorage.getItem('leeks_refresh_interval')) || 10; // 默认10秒
+        let searchTimeout = null;
+
+        // 本地股票数据库（备用方案）
+        const localStockDatabase = [
+            // A股 - 热门股票
+            { code: 'sh600519', name: '贵州茅台', pinyin: 'gzmt' },
+            { code: 'sh601318', name: '中国平安', pinyin: 'zgpa' },
+            { code: 'sh600036', name: '招商银行', pinyin: 'zsya' },
+            { code: 'sh000858', name: '五粮液', pinyin: 'wly' },
+            { code: 'sz000001', name: '平安银行', pinyin: 'payx' },
+            { code: 'sz000002', name: '万科A', pinyin: 'wka' },
+            { code: 'sz000063', name: '中兴通讯', pinyin: 'zxtx' },
+            { code: 'sz000333', name: '美的集团', pinyin: 'mdjt' },
+            { code: 'sz000651', name: '格力电器', pinyin: 'gldq' },
+            { code: 'sz000858', name: '五粮液', pinyin: 'wly' },
+            { code: 'sz002594', name: '比亚迪', pinyin: 'byd' },
+            { code: 'sz300750', name: '宁德时代', pinyin: 'ndsd' },
+            { code: 'sz300059', name: '东方财富', pinyin: 'dfcf' },
+            { code: 'sz002415', name: '海康威视', pinyin: 'hkws' },
+            { code: 'sz000568', name: '泸州老窖', pinyin: 'lzlj' },
+            { code: 'sz300274', name: '阳光电源', pinyin: 'ygdy' },
+            { code: 'sz002594', name: '比亚迪', pinyin: 'byd' },
+            { code: 'sz300015', name: '爱尔眼科', pinyin: 'aeyk' },
+            { code: 'sz002304', name: '洋河股份', pinyin: 'yhg' },
+            { code: 'sz002271', name: '东方雨虹', pinyin: 'dfyh' },
+            { code: 'sh600900', name: '长江电力', pinyin: 'cjdl' },
+            { code: 'sh600887', name: '伊利股份', pinyin: 'ylyg' },
+            { code: 'sh601888', name: '中国中免', pinyin: 'zgzmb' },
+            { code: 'sh600276', name: '恒瑞医药', pinyin: 'hrjy' },
+            { code: 'sh603259', name: '药明康德', pinyin: 'ymkd' },
+            { code: 'sz000997', name: '新大陆', pinyin: 'xdl' },
+            { code: 'sz002995', name: '天地在线', pinyin: 'tdzx' },
+            { code: 'sz000568', name: '泸州老窖', pinyin: 'lzlj' },
+
+            // 港股 - 热门股票
+            { code: 'hk00700', name: '腾讯控股', pinyin: 'txkg' },
+            { code: 'hk09988', name: '阿里巴巴', pinyin: 'albb' },
+            { code: 'hk03690', name: '美团', pinyin: 'meituan' },
+            { code: 'hk01810', name: '小米集团', pinyin: 'xmjt' },
+            { code: 'hk00941', name: '中国移动', pinyin: 'zgyd' },
+            { code: 'hk01299', name: '友邦保险', pinyin: 'yabx' },
+            { code: 'hk02318', name: '中国平安', pinyin: 'zgpa' },
+            { code: 'hk02628', name: '中国人寿', pinyin: 'zgrys' },
+            { code: 'hk01398', name: '工商银行', pinyin: 'gsyh' },
+            { code: 'hk00388', name: '港交所', pinyin: 'gjs' },
+            { code: 'hk00981', name: '中芯国际', pinyin: 'zxgj' },
+            { code: 'hk00762', name: '中国联通', pinyin: 'zglt' },
+            { code: 'hk01766', name: '中国中车', pinyin: 'zgzc' },
+            { code: 'hk01093', name: '石药集团', pinyin: 'syjt' },
+            { code: 'hk01109', name: '中国海外', pinyin: 'zghw' },
+            { code: 'hk01777', name: '新澳能源', pinyin: 'xany' },
+            { code: 'hk00241', name: '阿里健康', pinyin: 'aljk' },
+
+            // 美股 - 热门股票
+            { code: 'usAAPL', name: '苹果', pinyin: 'pingguo' },
+            { code: 'usTSLA', name: '特斯拉', pinyin: 'tesila' },
+            { code: 'usMSFT', name: '微软', pinyin: 'weiruan' },
+            { code: 'usGOOGL', name: '谷歌', pinyin: 'guge' },
+            { code: 'usAMZN', name: '亚马逊', pinyin: 'yamaxun' },
+            { code: 'usMETA', name: 'Meta', pinyin: 'meta' },
+            { code: 'usNVDA', name: '英伟达', pinyin: 'yingweida' },
+            { code: 'usNFLX', name: 'Netflix', pinyin: 'netflix' },
+            { code: 'usBABA', name: '阿里巴巴', pinyin: 'alibaba' },
+            { code: 'usJD', name: '京东', pinyin: 'jingdong' },
+            { code: 'usPDD', name: '拼多多', pinyin: 'pinduoduo' },
+            { code: 'usBIDU', name: '百度', pinyin: 'baidu' },
+            { code: 'usNTES', name: '网易', pinyin: 'wangyi' },
+            { code: 'usNIO', name: '蔚来', pinyin: 'weilai' },
+            { code: 'usXPEV', name: '小鹏', pinyin: 'xiaopeng' },
+            { code: 'usLI', name: '理想', pinyin: 'lixian' }
+        ];
+
+        // 从本地数据库搜索股票
+        function searchFromLocalDatabase(keyword) {
+            keyword = keyword.toLowerCase().trim();
+
+            return localStockDatabase.filter(stock => {
+                // 匹配代码
+                if (stock.code.toLowerCase().includes(keyword)) return true;
+                // 匹配名称
+                if (stock.name.includes(keyword)) return true;
+                // 匹配拼音
+                if (stock.pinyin.includes(keyword)) return true;
+                return false;
+            }).slice(0, 20);
+        }
 
         // 云端同步配置
         const GIST_TOKEN_KEY = 'leeks_gist_token';
@@ -1678,9 +1858,19 @@
 
             // 解析输入（支持格式: code 或 code,cost,bonds）
             const parts = value.split(',').map(s => s.trim());
-            const code = parts[0];
+            let code = parts[0];
             const cost = parts[1] || '--';
             const bonds = parts[2] || '--';
+
+            // 如果是纯中文或数字，尝试从选中项获取完整代码
+            if (!code.match(/^[a-zA-Z]{2}\d+/) && !code.match(/^[a-zA-Z]{2}[A-Z]+/)) {
+                // 尝试将输入转换为股票代码
+                code = convertToStockCode(code);
+                if (!code) {
+                    alert('股票代码格式错误，请使用: sh600519, sz000001, hk00700, usAAPL 或选择建议列表中的股票');
+                    return;
+                }
+            }
 
             // 验证股票代码格式
             const prefix = code.substring(0, 2).toLowerCase();
@@ -1717,7 +1907,249 @@
             refreshStocks();
 
             input.value = '';
+            hideSuggestions();
         }
+
+        // 将输入转换为股票代码
+        function convertToStockCode(input) {
+            input = input.trim().toUpperCase();
+
+            // 检查是否是标准代码格式
+            if (/^[A-Z]{2}\d+$/.test(input) || /^[A-Z]{2}[A-Z]+$/.test(input)) {
+                return input.toLowerCase();
+            }
+
+            // 简单映射常见股票名称到代码
+            const nameToCodeMap = {
+                '茅台': 'sh600519',
+                '贵州茅台': 'sh600519',
+                '平安银行': 'sz000001',
+                '万科': 'sz000002',
+                '万科A': 'sz000002',
+                '平安': 'sh601318',
+                '中国平安': 'sh601318',
+                '腾讯': 'hk00700',
+                '腾讯控股': 'hk00700',
+                '阿里': 'hk09988',
+                '阿里巴巴': 'hk09988',
+                '美团': 'hk03690',
+                '小米': 'hk01810',
+                '比亚迪': 'sz002594',
+                '宁德时代': 'sz300750',
+                '招商银行': 'sh600036',
+                '五粮液': 'sh000858',
+                '苹果': 'usAAPL',
+                '特斯拉': 'usTSLA',
+                '微软': 'usMSFT',
+                '谷歌': 'usGOOGL',
+                '亚马逊': 'usAMZN'
+            };
+
+            return nameToCodeMap[input] || null;
+        }
+
+        // 处理股票输入，显示搜索建议
+        async function handleStockInput(event) {
+            const input = event.target;
+            const value = input.value.trim();
+            const dropdown = document.getElementById('suggestionsDropdown');
+
+            // 清除之前的定时器
+            if (searchTimeout) {
+                clearTimeout(searchTimeout);
+            }
+
+            // 输入为空时隐藏建议
+            if (value.length === 0) {
+                hideSuggestions();
+                return;
+            }
+
+            // 如果已经是标准代码格式，不搜索建议
+            if (/^[a-zA-Z]{2}\d+$/.test(value) || /^[a-zA-Z]{2}[A-Z]+$/.test(value)) {
+                hideSuggestions();
+                return;
+            }
+
+            // 显示加载状态
+            dropdown.innerHTML = '<div class="suggestion-loading">搜索中...</div>';
+            dropdown.classList.add('active');
+
+            // 防抖处理
+            searchTimeout = setTimeout(async () => {
+                try {
+                    // 使用免费API搜索股票
+                    dropdown.innerHTML = '<div class="suggestion-loading">搜索中...</div>';
+                    dropdown.classList.add('active');
+
+                    const suggestions = await searchStockSuggestions(value);
+                    showSuggestions(suggestions);
+                } catch (error) {
+                    console.error('搜索股票失败:', error);
+                    dropdown.innerHTML = '<div class="suggestion-no-result">搜索失败，请稍后重试<br><small>错误: ' + error.message + '</small></div>';
+                }
+            }, 300);
+        }
+
+        // 搜索股票建议
+        async function searchStockSuggestions(keyword) {
+            // 如果本地数据库有匹配，直接返回
+            const localResults = searchFromLocalDatabase(keyword);
+            if (localResults.length > 0) {
+                return localResults;
+            }
+
+            // 如果本地没有匹配，尝试在线搜索
+            return new Promise((resolve) => {
+                try {
+                    // 创建script标签实现JSONP
+                    const script = document.createElement('script');
+
+                    // 设置超时计时器
+                    const timeoutId = setTimeout(() => {
+                        if (document.body.contains(script)) {
+                            document.body.removeChild(script);
+                        }
+                        // 清理全局变量
+                        if (window.suggestdata) {
+                            delete window.suggestdata;
+                        }
+                        console.log('在线搜索超时，使用本地数据库');
+                        resolve(searchFromLocalDatabase(keyword));
+                    }, 3000); // 3秒超时
+
+                    // 监听script加载完成，检查全局变量
+                    script.onload = function() {
+                        clearTimeout(timeoutId);
+
+                        try {
+                            // 新浪API会设置全局变量 window.suggestdata
+                            // 数据格式：var suggestdata="华胜天成,11,600410,sh600410,华胜天成,,华胜天成,99,1,,,";
+                            const rawData = window.suggestdata;
+
+                            // 移除script标签
+                            if (document.body.contains(script)) {
+                                document.body.removeChild(script);
+                            }
+                            // 清理全局变量
+                            delete window.suggestdata;
+
+                            if (!rawData || rawData === '') {
+                                console.log('在线搜索无结果，使用本地数据库');
+                                resolve(searchFromLocalDatabase(keyword));
+                                return;
+                            }
+
+                            console.log('收到API数据:', rawData);
+
+                            // 解析返回的数据
+                            const results = [];
+                            const items = rawData.split(';').filter(item => item.trim());
+
+                            items.forEach(item => {
+                                const parts = item.split(',');
+                                // 数据格式：名称,市场类型,数字代码,完整代码,名称,市场类型,拼音,其他字段...
+                                // parts[0] = 名称 (华胜天成)
+                                // parts[1] = 市场类型 (11)
+                                // parts[2] = 数字代码 (600410)
+                                // parts[3] = 完整代码 (sh600410)
+                                // parts[4] = 名称 (华胜天成)
+                                if (parts.length >= 5 && parts[3]) {
+                                    results.push({
+                                        code: parts[3],
+                                        name: parts[0] || parts[4] || '',
+                                        market: parts[1]
+                                    });
+                                }
+                            });
+
+                            if (results.length > 0) {
+                                console.log('在线搜索成功:', results);
+                                resolve(results.slice(0, 20));
+                            } else {
+                                console.log('解析后无结果，使用本地数据库');
+                                resolve(searchFromLocalDatabase(keyword));
+                            }
+                        } catch (error) {
+                            console.error('解析搜索结果失败:', error);
+                            if (document.body.contains(script)) {
+                                document.body.removeChild(script);
+                            }
+                            if (window.suggestdata) {
+                                delete window.suggestdata;
+                            }
+                            resolve(searchFromLocalDatabase(keyword));
+                        }
+                    };
+
+                    // 设置错误处理
+                    script.onerror = function() {
+                        clearTimeout(timeoutId);
+                        if (document.body.contains(script)) {
+                            document.body.removeChild(script);
+                        }
+                        if (window.suggestdata) {
+                            delete window.suggestdata;
+                        }
+                        console.error('搜索请求失败，使用本地数据库');
+                        resolve(searchFromLocalDatabase(keyword));
+                    };
+
+                    // 构建请求URL
+                    script.src = `https://suggest3.sinajs.cn/suggest/type=11,12,13,14,15&key=${encodeURIComponent(keyword)}&name=suggestdata&_t=${Date.now()}`;
+
+                    document.body.appendChild(script);
+                } catch (error) {
+                    console.error('在线搜索异常，使用本地数据库:', error);
+                    resolve(searchFromLocalDatabase(keyword));
+                }
+            });
+        }
+
+        // 显示搜索建议
+        function showSuggestions(suggestions) {
+            const dropdown = document.getElementById('suggestionsDropdown');
+
+            if (suggestions.length === 0) {
+                dropdown.innerHTML = '<div class="suggestion-no-result">未找到匹配的股票</div>';
+                dropdown.classList.add('active');
+                return;
+            }
+
+            dropdown.innerHTML = suggestions.map(item => `
+                <div class="suggestion-item" onclick="selectSuggestion('${item.code}')">
+                    <span class="suggestion-code">${item.code}</span>
+                    <span class="suggestion-name">${item.name}</span>
+                </div>
+            `).join('');
+
+            dropdown.classList.add('active');
+        }
+
+        // 隐藏搜索建议
+        function hideSuggestions() {
+            const dropdown = document.getElementById('suggestionsDropdown');
+            dropdown.classList.remove('active');
+            dropdown.innerHTML = '';
+        }
+
+        // 选择建议项
+        function selectSuggestion(code) {
+            const input = document.getElementById('stockInput');
+            input.value = code;
+            hideSuggestions();
+            input.focus();
+        }
+
+        // 点击其他地方隐藏建议
+        document.addEventListener('click', (event) => {
+            const stockInput = document.getElementById('stockInput');
+            const dropdown = document.getElementById('suggestionsDropdown');
+
+            if (!stockInput.contains(event.target) && !dropdown.contains(event.target)) {
+                hideSuggestions();
+            }
+        });
 
         // 删除股票
         function deleteStock(code, event) {
