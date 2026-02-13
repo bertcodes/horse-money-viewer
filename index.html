@@ -3128,6 +3128,11 @@
                 return;
             }
 
+            // 检查股市是否收盘
+            if (!isMarketOpen()) {
+                return;
+            }
+
             // 获取需要播报的股票数据
             const voiceStocks = stocks.filter(stock => voiceBroadcastStocks.includes(stock.code));
 
@@ -3153,6 +3158,37 @@
             // 播报所有消息
             const speechText = messages.join('，') + '。';
             speak(speechText);
+        }
+
+        // 判断股市是否开盘
+        function isMarketOpen() {
+            const now = new Date();
+            const day = now.getDay();
+
+            // 周末休市（周六=6，周日=0）
+            if (day === 0 || day === 6) {
+                return false;
+            }
+
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const currentTime = hours * 60 + minutes;
+
+            // A股交易时间：
+            // 上午：9:30-11:30
+            // 下午：13:00-15:00
+            const morningOpen = 9 * 60 + 30;   // 9:30
+            const morningClose = 11 * 60 + 30; // 11:30
+            const afternoonOpen = 13 * 60;      // 13:00
+            const afternoonClose = 15 * 60;     // 15:00
+
+            // 检查是否在交易时间内
+            if ((currentTime >= morningOpen && currentTime <= morningClose) ||
+                (currentTime >= afternoonOpen && currentTime <= afternoonClose)) {
+                return true;
+            }
+
+            return false;
         }
 
         function speak(text) {
