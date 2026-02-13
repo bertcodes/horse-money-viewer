@@ -1028,6 +1028,7 @@
                 <button class="toolbar-btn" onclick="clearAllStocks()" style="color: #e74c3c;">清空</button>
                 <button class="toolbar-btn" onclick="openCloudSync()">云端同步</button>
                 <button class="toolbar-btn" onclick="openColumnSettings()">列设置</button>
+                <button class="toolbar-btn" onclick="openVoiceSettings()">语音播报</button>
             </div>
             <div class="toolbar-right">
                 <span id="totalMarketValue" style="font-size: 12px; color: #7f8c8d; margin-right: 15px;">总市值: --</span>
@@ -1242,6 +1243,39 @@
             </div>
         </div>
 
+        <!-- 语音播报设置弹窗 -->
+        <div class="column-settings-popup" id="voiceSettingsPopup" onclick="closeVoiceSettings(event)">
+            <div class="column-settings-container" onclick="event.stopPropagation()">
+                <div class="chart-header">
+                    <span class="chart-title">语音播报设置</span>
+                    <button class="close-btn" onclick="closeVoiceSettings()">×</button>
+                </div>
+                <div class="column-settings-content" style="padding: 20px;">
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 15px; font-size: 14px;">
+                            <input type="checkbox" id="voiceEnabledCheckbox" onchange="toggleVoiceBroadcast()">
+                            开启语音播报
+                        </label>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #666;">播报间隔（秒）:</label>
+                            <input type="number" id="voiceIntervalInput" min="1" max="300" step="1" value="3"
+                                   onchange="changeVoiceInterval(this.value)"
+                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 10px;">选择要播报的股票</h4>
+                        <div id="voiceStockList" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; padding: 10px;">
+                            <!-- 股票列表将在这里动态生成 -->
+                        </div>
+                    </div>
+
+                    <button class="toolbar-btn active" onclick="testVoiceBroadcast()" style="width: 100%; margin-top: 10px;">测试播报</button>
+                </div>
+            </div>
+        </div>
+
     <script>
         // 股票数据存储
         let stocks = JSON.parse(localStorage.getItem('leeks_stocks') || '[]');
@@ -1255,6 +1289,12 @@
         let searchText = '';
         let refreshInterval = parseInt(localStorage.getItem('leeks_refresh_interval')) || 10; // 默认10秒
         let searchTimeout = null;
+
+        // 语音播报相关
+        let voiceBroadcastEnabled = localStorage.getItem('leeks_voice_broadcast') === 'true';
+        let voiceBroadcastStocks = JSON.parse(localStorage.getItem('leeks_voice_stocks') || '[]'); // 选中的股票列表
+        let voiceBroadcastInterval = parseInt(localStorage.getItem('leeks_voice_interval')) || 3; // 播报间隔（秒）
+        let voiceBroadcastTimer = null;
 
         // 本地股票数据库（备用方案）
         const localStockDatabase = [
@@ -1426,6 +1466,9 @@
 
             // 初始化云端同步状态
             updateCloudSyncUI();
+
+            // 初始化语音播报状态
+            updateVoiceUI();
         });
 
         // 保存股票列表到 localStorage
@@ -2326,12 +2369,6 @@
             const timestamp = Date.now();
             let url = '';
 
-            // 指数不支持图表（如 sh000001, sz399001）
-            if (code === 'sh000001' || code === 'sz399001' || code === 'sh000300') {
-                showChartError('该指数暂不支持图表展示');
-                return;
-            }
-
             if (prefix === 'sh' || prefix === 'sz') {
                 url = `https://image.sinajs.cn/newchart/${type}/n/${code}.gif?${timestamp}`;
             } else if (prefix === 'us') {
@@ -2997,6 +3034,160 @@
             document.querySelectorAll('#columnSettingsContent input[type="checkbox"]').forEach(cb => {
                 cb.checked = false;
             });
+        }
+
+        // 语音播报相关功能
+        function openVoiceSettings() {
+            // 渲染股票列表
+            const stockList = document.getElementById('voiceStockList');
+            stockList.innerHTML = stocks.map(stock => `
+                <div style="display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #f5f5f5;">
+                    <input type="checkbox" id="voice_${stock.code}" ${voiceBroadcastStocks.includes(stock.code) ? 'checked' : ''}
+                           onchange="toggleVoiceStock('${stock.code}')" style="margin-right: 10px;">
+                    <label for="voice_${stock.code}" style="flex: 1; cursor: pointer;">
+                        <span style="font-weight: 600;">${stock.name}</span>
+                        <span style="color: #999; margin-left: 8px; font-size: 12px;">${stock.code}</span>
+                    </label>
+                </div>
+            `).join('');
+
+            // 更新UI状态
+            document.getElementById('voiceEnabledCheckbox').checked = voiceBroadcastEnabled;
+            document.getElementById('voiceIntervalInput').value = voiceBroadcastInterval;
+
+            document.getElementById('voiceSettingsPopup').classList.add('active');
+        }
+
+        function closeVoiceSettings(event) {
+            if (!event || event.target === document.getElementById('voiceSettingsPopup')) {
+                document.getElementById('voiceSettingsPopup').classList.remove('active');
+            }
+        }
+
+        function toggleVoiceBroadcast() {
+            voiceBroadcastEnabled = document.getElementById('voiceEnabledCheckbox').checked;
+            localStorage.setItem('leeks_voice_broadcast', voiceBroadcastEnabled);
+
+            if (voiceBroadcastEnabled) {
+                startVoiceBroadcast();
+                showToast('语音播报已开启');
+            } else {
+                stopVoiceBroadcast();
+                showToast('语音播报已关闭');
+            }
+        }
+
+        function toggleVoiceStock(code) {
+            const index = voiceBroadcastStocks.indexOf(code);
+            if (index > -1) {
+                voiceBroadcastStocks.splice(index, 1);
+            } else {
+                voiceBroadcastStocks.push(code);
+            }
+            localStorage.setItem('leeks_voice_stocks', JSON.stringify(voiceBroadcastStocks));
+        }
+
+        function changeVoiceInterval(value) {
+            let interval = parseInt(value);
+            if (isNaN(interval) || interval < 1) interval = 1;
+            if (interval > 300) interval = 300;
+            voiceBroadcastInterval = interval;
+            localStorage.setItem('leeks_voice_interval', interval);
+            document.getElementById('voiceIntervalInput').value = interval;
+
+            // 如果语音播报正在运行，重启以应用新间隔
+            if (voiceBroadcastEnabled) {
+                stopVoiceBroadcast();
+                startVoiceBroadcast();
+            }
+        }
+
+        function startVoiceBroadcast() {
+            if (voiceBroadcastTimer) {
+                clearInterval(voiceBroadcastTimer);
+            }
+            voiceBroadcastTimer = setInterval(broadcastVoice, voiceBroadcastInterval * 1000);
+        }
+
+        function stopVoiceBroadcast() {
+            if (voiceBroadcastTimer) {
+                clearInterval(voiceBroadcastTimer);
+                voiceBroadcastTimer = null;
+            }
+        }
+
+        function updateVoiceUI() {
+            // 初始化时启动语音播报（如果已开启）
+            if (voiceBroadcastEnabled) {
+                startVoiceBroadcast();
+            }
+        }
+
+        function broadcastVoice() {
+            if (!voiceBroadcastEnabled || voiceBroadcastStocks.length === 0) {
+                return;
+            }
+
+            // 获取需要播报的股票数据
+            const voiceStocks = stocks.filter(stock => voiceBroadcastStocks.includes(stock.code));
+
+            if (voiceStocks.length === 0) {
+                return;
+            }
+
+            // 构建播报文本
+            const messages = voiceStocks.map(stock => {
+                const changePercent = parseFloat(stock.changePercent) || 0;
+                const now = stock.now || '--';
+                const name = stock.name || stock.code;
+
+                if (changePercent > 0) {
+                    return `${name}当前价${now}，上涨${changePercent.toFixed(2)}%`;
+                } else if (changePercent < 0) {
+                    return `${name}当前价${now}，下跌${Math.abs(changePercent).toFixed(2)}%`;
+                } else {
+                    return `${name}当前价${now}，平盘`;
+                }
+            });
+
+            // 播报所有消息
+            const speechText = messages.join('，') + '。';
+            speak(speechText);
+        }
+
+        function speak(text) {
+            // 取消之前的语音
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+
+            // 创建语音
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-CN';
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+
+            // 尝试使用中文语音
+            if ('speechSynthesis' in window) {
+                const voices = window.speechSynthesis.getVoices();
+                const chineseVoice = voices.find(voice =>
+                    voice.lang.includes('zh') || voice.lang.includes('CN')
+                );
+                if (chineseVoice) {
+                    utterance.voice = chineseVoice;
+                }
+
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function testVoiceBroadcast() {
+            if (voiceBroadcastStocks.length === 0) {
+                showToast('请先选择要播报的股票');
+                return;
+            }
+
+            broadcastVoice();
         }
     </script>
 </body>
