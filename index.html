@@ -1222,6 +1222,15 @@
                             </div>
                         </div>
 
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 10px;">GitHub Token</h4>
+                            <div style="display: flex; gap: 10px; align-items: stretch;">
+                                <input type="text" id="githubTokenDisplay" readonly placeholder="GitHub Token"
+                                       style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #f5f5f5; font-family: monospace; font-size: 11px;">
+                                <button class="toolbar-btn" onclick="copyGitHubToken()" id="copyTokenBtn" style="min-width: 80px;">复制</button>
+                            </div>
+                        </div>
+
                         <div style="display: flex; gap: 10px; margin-bottom: 20px;">
                             <button class="toolbar-btn active" onclick="backupToGitHub(this)" style="flex: 1;">立即备份</button>
                             <button class="toolbar-btn" onclick="restoreFromGitHub(this)" style="flex: 1;">恢复数据</button>
@@ -2678,6 +2687,9 @@
                 configured.style.display = 'block';
                 document.getElementById('autoSyncCheckbox').checked = autoSyncEnabled;
 
+                // 显示 GitHub Token
+                document.getElementById('githubTokenDisplay').value = token;
+
                 // 更新上次同步时间
                 const lastSync = localStorage.getItem('leeks_last_sync');
                 if (lastSync) {
@@ -2715,6 +2727,27 @@
             localStorage.setItem(GIST_TOKEN_KEY, token);
             showToast('Token 保存成功！');
             updateCloudSyncUI();
+        }
+
+        // 复制 GitHub Token
+        function copyGitHubToken() {
+            const tokenInput = document.getElementById('githubTokenDisplay');
+            const copyBtn = document.getElementById('copyTokenBtn');
+
+            navigator.clipboard.writeText(tokenInput.value).then(() => {
+                copyBtn.textContent = '已复制';
+                setTimeout(() => {
+                    copyBtn.textContent = '复制';
+                }, 2000);
+            }).catch(() => {
+                // 降级方案
+                tokenInput.select();
+                document.execCommand('copy');
+                copyBtn.textContent = '已复制';
+                setTimeout(() => {
+                    copyBtn.textContent = '复制';
+                }, 2000);
+            });
         }
 
         // 清除 GitHub Token
