@@ -1644,8 +1644,11 @@
                     statusText = '已触发止损';
                 }
             }
+            // 只有持仓有值时才显示"持有中"
             if (priceStatus === 'neutral' && (!isNaN(targetPrice) || !isNaN(stopLoss))) {
-                statusText = '持有中';
+                if (stock.bonds && stock.bonds !== '--' && parseFloat(stock.bonds) > 0) {
+                    statusText = '持有中';
+                }
             }
 
             // 计算持仓市值
