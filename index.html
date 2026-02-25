@@ -1667,7 +1667,7 @@
                 marketValue = (now * bonds).toFixed(2);
             }
 
-            // 简单的涨跌预测（基于涨跌幅和价格位置）
+            // 涨跌预测（基于涨跌幅、价格位置和成交量）
             let prediction = '--';
             let predictionClass = 'gray';
             let predictionRule = '';
@@ -1679,40 +1679,122 @@
                 // 计算价格位置
                 const pricePosition = (now - min) / (max - min);
 
-                // 结合涨跌幅和价格位置进行预测
-                if (changePercent > 3 && pricePosition > 0.7) {
-                    prediction = '⚠️ 冲高回落';
+                // 获取成交量用于综合判断
+                const volume = parseFloat(stock.volume) || 0;
+
+                // 根据股价获取对应的成交量阈值（复用 formatVolume 中的逻辑）
+                const getVolumeThresholds = () => {
+                    let multiplier;
+                    if (now > 200) {
+                        multiplier = 0.5;
+                    } else if (now > 100) {
+                        multiplier = 0.8;
+                    } else if (now > 50) {
+                        multiplier = 1.0;
+                    } else if (now > 20) {
+                        multiplier = 1.5;
+                    } else if (now > 10) {
+                        multiplier = 2.0;
+                    } else {
+                        multiplier = 3.0;
+                    }
+                    return {
+                        normalVolume: Math.floor(10000 * multiplier),
+                        highVolume: Math.floor(50000 * multiplier),
+                        hugeVolume: Math.floor(100000 * multiplier)
+                    };
+                };
+
+                const volumeThresholds = getVolumeThresholds();
+                const isHighVolume = volume >= volumeThresholds.highVolume;
+                const isHugeVolume = volume >= volumeThresholds.hugeVolume;
+                const isLowVolume = volume < volumeThresholds.normalVolume;
+
+                // 计算距离最高价的空间（冲高回落的关键指标）
+                const distanceToMax = max > 0 ? ((max - now) / max * 100) : 0;
+
+                // 冲高回落预警 - 降低阈值，提前预警
+                const isBigRise = changePercent > 2.5;
+                const isNearTop = pricePosition > 0.75;
+
+                if (isBigRise && isNearTop) {
+                    // 情况1：大幅上涨+接近高点+巨量（可能是诱多）
+                    if (isHugeVolume) {
+                        prediction = '⚠️ 冲高回落';
+                        predictionClass = 'gray';
+                        predictionRule = `涨幅${changePercent.toFixed(2)}% > 2.5%，价格位置${(pricePosition * 100).toFixed(0)}% > 75%，巨量${volume}手`;
+                    }
+                    // 情况2：大幅上涨+接近高点但缩量（可能乏力）
+                    else if (isLowVolume && changePercent > 4) {
+                        prediction = '⚠️ 冲高回落';
+                        predictionClass = 'gray';
+                        predictionRule = `涨幅${changePercent.toFixed(2)}% > 4%，价格位置${(pricePosition * 100).toFixed(0)}% > 75%，缩量${volume}手`;
+                    }
+                    // 情况3：大幅上涨+接近高点+放量（强势）
+                    else if (isHighVolume) {
+                        prediction = '📈 强势';
+                        predictionClass = 'red';
+                        predictionRule = `涨幅${changePercent.toFixed(2)}% > 2.5%，价格位置${(pricePosition * 100).toFixed(0)}% > 75%，放量${volume}手`;
+                    }
+                    else {
+                        prediction = '📈 强势';
+                        predictionClass = 'red';
+                        predictionRule = `涨幅${changePercent.toFixed(2)}% > 2.5%，价格位置${(pricePosition * 100).toFixed(0)}% > 75%`;
+                    }
+                }
+                // 新增：高位滞涨预警（涨幅一般但位置很高）
+                else if (changePercent > 0.5 && changePercent <= 2.5 && pricePosition > 0.85) {
+                    prediction = '⚠️ 高位滞涨';
                     predictionClass = 'gray';
-                    predictionRule = `涨幅${changePercent.toFixed(2)}% > 3%，价格位置${(pricePosition * 100).toFixed(0)}% > 70%`;
-                } else if (changePercent > 2 && pricePosition > 0.6) {
+                    predictionRule = `价格位置${(pricePosition * 100).toFixed(0)}% > 85%，但涨幅仅${changePercent.toFixed(2)}%`;
+                }
+                // 新增：量价背离预警
+                else if (changePercent > 2 && pricePosition > 0.65 && isLowVolume) {
+                    prediction = '⚠️ 量价背离';
+                    predictionClass = 'gray';
+                    predictionRule = `涨幅${changePercent.toFixed(2)}% > 2%，但缩量${volume}手，可能乏力`;
+                }
+                // 强势上涨
+                else if (changePercent > 1.5 && pricePosition > 0.6) {
                     prediction = '📈 强势';
                     predictionClass = 'red';
-                    predictionRule = `涨幅${changePercent.toFixed(2)}% > 2%，价格位置${(pricePosition * 100).toFixed(0)}% > 60%`;
-                } else if (changePercent > 0 && pricePosition > 0.5) {
+                    predictionRule = `涨幅${changePercent.toFixed(2)}% > 1.5%，价格位置${(pricePosition * 100).toFixed(0)}% > 60%`;
+                }
+                // 上涨
+                else if (changePercent > 0 && pricePosition > 0.5) {
                     prediction = '↗️ 上涨';
                     predictionClass = 'red';
                     predictionRule = `涨幅${changePercent.toFixed(2)}%，价格位置${(pricePosition * 100).toFixed(0)}% > 50%`;
-                } else if (changePercent < -2 && pricePosition < 0.4) {
+                }
+                // 弱势
+                else if (changePercent < -2 && pricePosition < 0.4) {
                     prediction = '⚠️ 弱势';
                     predictionClass = 'green';
                     predictionRule = `跌幅${Math.abs(changePercent).toFixed(2)}% > 2%，价格位置${(pricePosition * 100).toFixed(0)}% < 40%`;
-                } else if (changePercent < 0 && pricePosition < 0.5) {
+                }
+                // 下跌
+                else if (changePercent < 0 && pricePosition < 0.5) {
                     prediction = '↘️ 下跌';
                     predictionClass = 'green';
                     predictionRule = `跌幅${Math.abs(changePercent).toFixed(2)}%，价格位置${(pricePosition * 100).toFixed(0)}% < 50%`;
-                } else if (Math.abs(changePercent) < 1) {
+                }
+                // 震荡
+                else if (Math.abs(changePercent) < 1) {
                     prediction = '➡️ 震荡';
                     predictionClass = 'gray';
                     predictionRule = `涨跌幅${Math.abs(changePercent).toFixed(2)}% < 1%`;
-                } else if (pricePosition > 0.5 && changePercent > 0) {
+                }
+                else if (pricePosition > 0.5 && changePercent > 0) {
                     prediction = '📈 上涨';
                     predictionClass = 'red';
                     predictionRule = `价格位置${(pricePosition * 100).toFixed(0)}% > 50%，涨幅${changePercent.toFixed(2)}%`;
-                } else if (pricePosition < 0.5 && changePercent < 0) {
+                }
+                else if (pricePosition < 0.5 && changePercent < 0) {
                     prediction = '📉 下跌';
                     predictionClass = 'green';
                     predictionRule = `价格位置${(pricePosition * 100).toFixed(0)}% < 50%，跌幅${Math.abs(changePercent).toFixed(2)}%`;
-                } else {
+                }
+                else {
                     prediction = '➡️ 震荡';
                     predictionClass = 'gray';
                     predictionRule = `价格位置${(pricePosition * 100).toFixed(0)}%，涨跌幅${changePercent.toFixed(2)}%`;
@@ -1838,21 +1920,53 @@
             let colorClass = 'gray';
             let tooltip = '';
 
-            // 放量判断（大幅降低阈值，更容易看到颜色效果）
+            // 根据股价获取对应的成交量阈值
+            const getVolumeThresholds = (code) => {
+                const stocksData = stocks.find(s => s.code === code);
+                const price = stocksData ? parseFloat(stocksData.now) || 0 : 0;
+
+                // 股价越高，成交量阈值越低（因为高价股通常每笔交易的手数较少）
+                // 低价股需要更高的成交量才能算"放量"
+                let multiplier;
+                if (price > 200) {
+                    multiplier = 0.5;   // 超高价股（如茅台 >1500元）
+                } else if (price > 100) {
+                    multiplier = 0.8;   // 高价股
+                } else if (price > 50) {
+                    multiplier = 1.0;   // 中高价股
+                } else if (price > 20) {
+                    multiplier = 1.5;   // 中价股
+                } else if (price > 10) {
+                    multiplier = 2.0;   // 中低价股
+                } else {
+                    multiplier = 3.0;   // 低价股（<10元）
+                }
+
+                return {
+                    normalVolume: Math.floor(10000 * multiplier),    // 基础量：1万手 × 系数
+                    highVolume: Math.floor(50000 * multiplier),     // 明显放量：5万手 × 系数
+                    hugeVolume: Math.floor(100000 * multiplier),    // 巨量：10万手 × 系数
+                    multiplier: multiplier
+                };
+            };
+
+            const thresholds = getVolumeThresholds(code);
+
+            // 放量判断（根据股价动态调整阈值）
             // 1. 大幅波动
             if (Math.abs(change) > 3) {
                 colorClass = change > 0 ? 'red' : 'green';
                 tooltip = `涨跌幅${change.toFixed(2)}% > 3%，${change > 0 ? '大幅上涨' : '大幅下跌'}`;
             }
-            // 2. 中等波动且有一定成交量
-            else if (Math.abs(change) > 1.5 && volumeNum > 1000) {
+            // 2. 中等波动且有较大成交量
+            else if (Math.abs(change) > 1.5 && volumeNum > thresholds.normalVolume) {
                 colorClass = change > 0 ? 'red' : 'green';
-                tooltip = `涨跌幅${change.toFixed(2)}% > 1.5%，成交量${volumeNum}手 > 1000手`;
+                tooltip = `涨跌幅${change.toFixed(2)}% > 1.5%，成交量${volumeNum}手 > ${thresholds.normalVolume}手`;
             }
-            // 3. 小幅波动但成交量较大
-            else if (Math.abs(change) > 0.5 && volumeNum > 5000) {
+            // 3. 小幅波动但巨量
+            else if (Math.abs(change) > 0.5 && volumeNum > thresholds.hugeVolume) {
                 colorClass = change > 0 ? 'red' : 'green';
-                tooltip = `涨跌幅${change.toFixed(2)}% > 0.5%，成交量${volumeNum}手 > 5000手`;
+                tooltip = `涨跌幅${change.toFixed(2)}% > 0.5%，巨量${volumeNum}手（>${(thresholds.hugeVolume / 10000).toFixed(0)}万手）`;
             }
             // 4. 正常波动
             else if (Math.abs(change) > 0.1) {
