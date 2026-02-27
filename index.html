@@ -1014,7 +1014,7 @@
             <div style="flex: 1; position: relative;">
                 <input type="text" id="stockInput" placeholder="输入股票代码或名称，如: sh600519、贵州茅台"
                        onkeypress="if(event.key==='Enter') addStock()" oninput="handleStockInput(event)"
-                       autocomplete="off">
+                       autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
                 <div class="suggestions-dropdown" id="suggestionsDropdown"></div>
             </div>
             <button class="add-btn" onclick="addStock()">添加</button>
@@ -1431,6 +1431,12 @@
 
         // 初始化
         document.addEventListener('DOMContentLoaded', () => {
+            // 清空股票输入框的值，防止浏览器自动填充或其他原因导致显示错误数据
+            const stockInput = document.getElementById('stockInput');
+            if (stockInput && stockInput.value) {
+                stockInput.value = '';
+            }
+
             if (stocks.length === 0) {
                 // 添加默认示例股票
                 stocks = [
@@ -2120,8 +2126,15 @@
         // 处理股票输入，显示搜索建议
         async function handleStockInput(event) {
             const input = event.target;
-            const value = input.value.trim();
+            let value = input.value.trim();
             const dropdown = document.getElementById('suggestionsDropdown');
+
+            // 如果输入的是无效的哈希值，清空它
+            if (/^[a-f0-9]{32}$/.test(value)) {
+                input.value = '';
+                hideSuggestions();
+                return;
+            }
 
             // 清除之前的定时器
             if (searchTimeout) {
