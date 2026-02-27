@@ -2203,8 +2203,17 @@
                             // 清理全局变量
                             delete window.suggestdata;
 
-                            if (!rawData || rawData === '') {
+                            // 验证数据有效性
+                            if (!rawData || rawData === '' || typeof rawData !== 'string') {
                                 console.log('在线搜索无结果，使用本地数据库');
+                                resolve(searchFromLocalDatabase(keyword));
+                                return;
+                            }
+
+                            // 检查是否为无效的错误数据（如哈希值等）
+                            if (/^[a-f0-9]{32}$/.test(rawData) || rawData.length < 10 || !rawData.includes(',')) {
+                                console.log('收到无效数据格式，使用本地数据库');
+                                console.log('无效数据:', rawData);
                                 resolve(searchFromLocalDatabase(keyword));
                                 return;
                             }
