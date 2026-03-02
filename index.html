@@ -817,14 +817,17 @@
             color: white;
             padding: 6px 12px;
             border-radius: 4px;
-            font-size: 12px;
-            white-space: nowrap;
+            font-size: 11px;
+            white-space: pre-wrap;
+            max-width: 300px;
+            min-width: 200px;
             opacity: 0;
             visibility: hidden;
             transition: all 0.2s;
             z-index: 1000;
             margin-bottom: 8px;
             pointer-events: none;
+            text-align: left;
         }
 
         .price-tooltip:hover::after {
@@ -1025,7 +1028,7 @@
 
         <div class="toolbar">
             <div class="toolbar-left">
-                <button class="toolbar-btn" onclick="clearAllStocks()" style="color: #e74c3c;">清空</button>
+                <button class="toolbar-btn delete-btn" id="clearBtn" onclick="clearAllStocks()">清空</button>
                 <button class="toolbar-btn" onclick="openCloudSync()">云端同步</button>
                 <button class="toolbar-btn" onclick="openColumnSettings()">列设置</button>
                 <button class="toolbar-btn" onclick="openVoiceSettings()">语音播报</button>
@@ -1034,7 +1037,7 @@
                 <span id="totalMarketValue" style="font-size: 12px; color: #7f8c8d; margin-right: 15px;">总市值: --</span>
                 <span id="totalIncome" style="font-size: 12px; color: #7f8c8d; margin-right: 15px;">总收益: --</span>
                 <span style="font-size: 12px; color: #7f8c8d; margin-right: 5px;">刷新:</span>
-                <input type="number" id="refreshIntervalInput" min="3" max="300" step="1" value="10"
+                <input type="number" id="refreshIntervalInput" min="1" max="300" step="1" value="10"
                        onchange="changeRefreshInterval(this.value)"
                        style="width: 50px; padding: 2px 5px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px; margin-right: 3px;">
                 <span style="font-size: 12px; color: #7f8c8d;">秒</span>
@@ -1120,6 +1123,10 @@
                     <div class="form-group">
                         <label>止损价</label>
                         <input type="number" id="editStopLoss" placeholder="输入止损价，如: 900" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>买入日期</label>
+                        <input type="date" id="editBuyDate">
                     </div>
                     <div class="form-buttons">
                         <button class="toolbar-btn" onclick="closeEditPopup()">取消</button>
@@ -1283,6 +1290,58 @@
             </div>
         </div>
 
+        <!-- 卖出弹窗 -->
+                         </div>
+            </div>
+        </div>
+
+        <!-- 卖出弹窗 -->
+        <div class="column-settings-popup" id="sellPopup" onclick="closeSellPopup(event)">
+            <div class="column-settings-container" onclick="event.stopPropagation()" style="max-width: 400px;">
+                <div class="chart-header">
+                    <span class="chart-title">确认卖出</span>
+                    <button class="close-btn" onclick="closeSellPopup()">×</button>
+                </div>
+                <div class="column-settings-content" style="padding: 20px;">
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #34495e; font-weight: 500;">股票代码</label>
+                        <input type="text" id="sellCode" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #f5f5f5;">
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #34495e; font-weight: 500;">股票名称</label>
+                        <input type="text" id="sellName" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #f5f5f5;">
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 10px; font-size: 14px; color: #34495e; font-weight: 500;">卖出原因</label>
+                        <label style="display: flex; align-items: center; margin-bottom: 10px; cursor: pointer;">
+                            <input type="radio" name="sellReason" value="target" style="margin-right: 8px;">
+                            <span>✅ 达到目标价卖出</span>
+                        </label>
+                        <label style="display: flex; align-items: center; margin-bottom: 10px; cursor: pointer;">
+                            <input type="radio" name="sellReason" value="stoploss" style="margin-right: 8px;">
+                            <span>🛡️ 触发止损卖出</span>
+                        </label>
+                        <label style="display: flex; align-items: center; margin-bottom: 10px; cursor: pointer;">
+                            <input type="radio" name="sellReason" value="other" style="margin-right: 8px;">
+                            <span>📝 其他原因（需说明）</span>
+                        </label>
+                    </div>
+
+                    <div style="margin-bottom: 20px;" id="sellNoteContainer" style="display: none;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #34495e; font-weight: 500;">卖出说明</label>
+                        <input type="text" id="sellNote" placeholder="请输入卖出原因，如: 需要资金周转、行情变化等" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button class="toolbar-btn" onclick="closeSellPopup()" style="flex: 1;">取消</button>
+                        <button class="toolbar-btn active" onclick="confirmSell()" style="flex: 1;">确认卖出</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     <script>
         // 股票数据存储
         let stocks = JSON.parse(localStorage.getItem('leeks_stocks') || '[]');
@@ -1418,12 +1477,14 @@
             { key: 'status', name: '状态', default: true },
             { key: 'yieldToTarget', name: '目标收益', default: true },
             { key: 'yieldToStop', name: '止损损失', default: true },
-            { key: 'riskRewardRatio', name: '盈亏比', default: true }
+            { key: 'riskRewardRatio', name: '盈亏比', default: true },
+            { key: 'holdDays', name: '持股天数', default: true },
+            { key: 'disciplineScore', name: '纪律评分', default: true }
         ];
 
-        // 确保 prediction 和成交量相关列在可见列中（兼容旧数据）
+        // 确保 prediction、holdDays、disciplineScore 和成交量相关列在可见列中（兼容旧数据）
         let visibleColumns = JSON.parse(localStorage.getItem('leeks_visible_columns') || JSON.stringify(columnConfig.map(c => c.key)));
-        if (!visibleColumns.includes('prediction') || !visibleColumns.includes('volume')) {
+        if (!visibleColumns.includes('prediction') || !visibleColumns.includes('volume') || !visibleColumns.includes('holdDays') || !visibleColumns.includes('disciplineScore')) {
             visibleColumns = columnConfig.filter(c => c.default).map(c => c.key);
         }
 
@@ -1438,9 +1499,9 @@
             if (stocks.length === 0) {
                 // 添加默认示例股票
                 stocks = [
-                    { code: 'sh600519', name: '贵州茅台', cost: '1000', bonds: '100', targetPrice: '1200', stopLoss: '950' },
-                    { code: 'sz000001', name: '平安银行', cost: '10', bonds: '1000', targetPrice: '12', stopLoss: '9' },
-                    { code: 'sz000002', name: '万科A', cost: '20', bonds: '500', targetPrice: '25', stopLoss: '18' }
+                    { code: 'sh600519', name: '贵州茅台', cost: '1000', bonds: '100', targetPrice: '1200', stopLoss: '950', buyDate: new Date().toISOString().split('T')[0] },
+                    { code: 'sz000001', name: '平安银行', cost: '10', bonds: '1000', targetPrice: '12', stopLoss: '9', buyDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] },
+                    { code: 'sz000002', name: '万科A', cost: '20', bonds: '500', targetPrice: '25', stopLoss: '18', buyDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }
                 ];
                 saveStocks();
             }
@@ -1482,6 +1543,20 @@
 
             // 初始化语音播报状态
             updateVoiceUI();
+
+            // 监听卖出原因选择
+            const reasonInputs = document.querySelectorAll('input[name="sellReason"]');
+            const noteContainer = document.getElementById('sellNoteContainer');
+
+            reasonInputs.forEach(input => {
+                input.addEventListener('change', (e) => {
+                    if (e.target.value === 'other') {
+                        noteContainer.style.display = 'block';
+                    } else {
+                        noteContainer.style.display = 'none';
+                    }
+                });
+            });
         });
 
         // 保存股票列表到 localStorage
@@ -1645,22 +1720,37 @@
                 }
             }
 
-            if (!isNaN(now) && !isNaN(targetPrice) && targetPrice > 0) {
-                if (now >= targetPrice) {
+            // 检查是否已卖出
+            if (stock.stats && stock.stats.sold) {
+                priceStatus = 'neutral';
+                if (stock.stats.soldReason === 'target') {
+                    statusText = '✅ 已达标卖出';
                     priceStatus = 'target';
-                    statusText = '已达目标';
-                }
-            }
-            if (!isNaN(now) && !isNaN(stopLoss) && stopLoss > 0) {
-                if (now <= stopLoss) {
+                } else if (stock.stats.soldReason === 'stoploss') {
+                    statusText = '🛡️ 已止损卖出';
                     priceStatus = 'stop';
-                    statusText = '已触发止损';
+                } else {
+                    statusText = '📝 已卖出';
                 }
-            }
-            // 只有持仓有值时才显示"持有中"
-            if (priceStatus === 'neutral' && (!isNaN(targetPrice) || !isNaN(stopLoss))) {
-                if (stock.bonds && stock.bonds !== '--' && parseFloat(stock.bonds) > 0) {
-                    statusText = '持有中';
+            } else {
+                // 未卖出时的状态判断
+                if (!isNaN(now) && !isNaN(targetPrice) && targetPrice > 0) {
+                    if (now >= targetPrice) {
+                        priceStatus = 'target';
+                        statusText = '已达目标';
+                    }
+                }
+                if (!isNaN(now) && !isNaN(stopLoss) && stopLoss > 0) {
+                    if (now <= stopLoss) {
+                        priceStatus = 'stop';
+                        statusText = '已触发止损';
+                    }
+                }
+                // 只有持仓有值时才显示"持有中"
+                if (priceStatus === 'neutral' && (!isNaN(targetPrice) || !isNaN(stopLoss))) {
+                    if (stock.bonds && stock.bonds !== '--' && parseFloat(stock.bonds) > 0) {
+                        statusText = '持有中';
+                    }
                 }
             }
 
@@ -1695,7 +1785,7 @@
                         multiplier = 0.8;
                     } else if (now > 50) {
                         multiplier = 1.0;
-                    } else if (now > 20) {
+                    } else if (now >0) {
                         multiplier = 1.5;
                     } else if (now > 10) {
                         multiplier = 2.0;
@@ -1820,7 +1910,7 @@
                 cost: `<td class="editable" onclick="event.stopPropagation(); openEditPopup('${stock.code}')">${stock.cost || '--'}</td>`,
                 bonds: `<td class="editable" onclick="event.stopPropagation(); openEditPopup('${stock.code}')">${stock.bonds || '--'}</td>`,
                 marketValue: `<td class="price-tooltip" data-tooltip="当前价 × 持仓数量">${marketValue}</td>`,
-                prediction: `<td class="${predictionClass} price-tooltip" data-tooltip="${predictionRule || '数据不足，无法预测'}">${prediction}</td>`,
+                prediction: `<td class="gray price-tooltip" data-tooltip="${predictionRule || '数据不足，无法预测'}">${formatPredictionForStealthMode(prediction, predictionClass)}</td>`,
                 incomePercent: `<td class="${stock.incomePercent >= 0 ? 'red' : stock.incomePercent < 0 ? 'green' : 'gray'}">${formatChangePercent(stock.incomePercent)}</td>`,
                 income: `<td class="${stock.income >= 0 ? 'red' : stock.income < 0 ? 'green' : 'gray'}">${formatIncome(stock.income)}</td>`,
                 targetPrice: `<td class="editable price-tooltip" onclick="event.stopPropagation(); openEditPopup('${stock.code}')"
@@ -1830,13 +1920,20 @@
                 status: `<td><span class="price-status ${priceStatus}">${statusText}</span></td>`,
                 yieldToTarget: `<td class="${yieldToTarget >= 0 ? 'red' : yieldToTarget < 0 ? 'green' : 'gray'}">${formatChangePercent(yieldToTarget)}</td>`,
                 yieldToStop: `<td class="${yieldToStop >= 0 ? 'red' : yieldToStop < 0 ? 'green' : 'gray'}">${formatChangePercent(yieldToStop)}</td>`,
-                riskRewardRatio: `<td class="price-tooltip" data-tooltip="${riskRewardRatio !== '--' ? '收益潜力是风险的 ' + riskRewardRatio.split(':')[0] + ' 倍' : '--'}">${riskRewardRatio}</td>`
+                riskRewardRatio: `<td class="price-tooltip" data-tooltip="${riskRewardRatio !== '--' ? '收益潜力是风险的 ' + riskRewardRatio.split(':')[0] + ' 倍' : '--'}">${riskRewardRatio}</td>`,
+                holdDays: `<td>${formatHoldDays(stock)}</td>`,
+                disciplineScore: renderDisciplineScore(stock, riskRewardRatio, yieldToTarget, yieldToStop, marketValue)
             };
 
             return columnConfig
                 .filter(col => visibleColumns.includes(col.key))
                 .map(col => cellMap[col.key] || '')
-                .join('') + '<td><button class="toolbar-btn delete-btn" onclick="deleteStock(\'' + stock.code + '\', event)">删除</button></td>';
+                .join('') + `<td>
+                    ${stock.stats && stock.stats.sold
+                        ? `<button class="toolbar-btn" onclick="realDeleteStock('${stock.code}', event)" style="font-size: 11px; padding: 4px 10px;">移除</button>`
+                        : `<button class="toolbar-btn" onclick="deleteStock('${stock.code}', event)" style="margin-right: 5px;">卖出</button><button class="toolbar-btn delete-btn" onclick="realDeleteStock('${stock.code}', event)">删除</button>`
+                    }
+                </td>`;
         }
 
         // 更新总资产统计
@@ -1913,6 +2010,230 @@
             if (!value) return '--';
             value = parseFloat(value);
             return value >= 0 ? `+${value.toFixed(2)}` : value.toFixed(2);
+        }
+
+        // 格式化持股天数
+        function formatHoldDays(stock) {
+            if (!stock.buyDate) return '--';
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const buyDate = new Date(stock.buyDate);
+            buyDate.setHours(0, 0, 0, 0);
+
+            const diffTime = today - buyDate;
+            const holdDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+            if (holdDays <= 0) return '1天';
+
+            // 隐蔽模式下不显示图标
+            if (stealthMode) {
+                return `${holdDays}天`;
+            }
+
+            // 根据持仓周期显示标签
+            let label = '';
+            if (holdDays === 1) label = ' ⚡'; // 超短线（1天）
+            else if (holdDays <= 3) label = ' ⏱️'; // 短线（1-3天）
+            else if (holdDays <= 10) label = ' ⏰'; // 短中（4-10天）
+            else if (holdDays <= 30) label = ' 📅'; // 中线（11-30天）
+            else if (holdDays <= 90) label = ' 🗓️'; // 长线（31-90天）
+            else label = ' 📜'; // 超长线（>90天）
+
+            return `${holdDays}天${label}`;
+        }
+
+        // 计算交易纪律评分
+        function calculateDisciplineScore(stock, riskRewardRatio, yieldToTarget, yieldToStop, marketValue) {
+            let totalScore = 0;
+            let details = [];
+
+            // 1. 交易计划完整性 (30分)
+            const targetPrice = parseFloat(stock.targetPrice);
+            const stopLoss = parseFloat(stock.stopLoss);
+
+            if (targetPrice > 0) {
+                totalScore += 15;
+                details.push({ icon: '✅', text: '有目标价', score: '+15', rule: '设置目标价得15分' });
+            } else {
+                details.push({ icon: '❌', text: '无目标价', score: '0', rule: '未设置目标价0分' });
+            }
+
+            if (stopLoss > 0) {
+                totalScore += 15;
+                details.push({ icon: '✅', text: '有止损价', score: '+15', rule: '设置止损价得15分' });
+            } else {
+                details.push({ icon: '❌', text: '无止损价', score: '0', rule: '未设置止损价0分' });
+            }
+
+            // 2. 盈亏比合理性 (30分)
+            let ratio = 0;
+            if (riskRewardRatio && riskRewardRatio !== '--') {
+                ratio = parseFloat(riskRewardRatio.split(':')[0]);
+                if (ratio >= 5) {
+                    totalScore += 30;
+                    details.push({ icon: '✅', text: '盈亏比优秀', score: '+30', rule: '盈亏比≥5:1得30分' });
+                } else if (ratio >= 3) {
+                    totalScore += 15;
+                    details.push({ icon: '⚠️', text: '盈亏比勉强', score: '+15', rule: '盈亏比3-5:1得15分' });
+                } else if (ratio >= 2) {
+                    totalScore += 8;
+                    details.push({ icon: '⚠️', text: '盈亏比较差', score: '+8', rule: '盈亏比2-3:1得8分' });
+                } else if (ratio >= 1) {
+                    totalScore += 4;
+                    details.push({ icon: '⚠️', text: '盈亏比很差', score: '+4', rule: '盈亏比1-2:1得4分' });
+                } else {
+                    details.push({ icon: '❌', text: '盈亏比不合格', score: '0', rule: '盈亏比<1:1得0分' });
+                }
+            } else {
+                details.push({ icon: '❌', text: '无盈亏比数据', score: '0', rule: '无盈亏比数据得0分' });
+            }
+
+            // 3. 执行情况 (40分)
+            const now = parseFloat(stock.now);
+            const stats = stock.stats || {};
+
+            // 检查是否达到目标价或触发止损
+            const targetReached = !isNaN(now) && targetPrice > 0 && now >= targetPrice;
+            const stopLossTriggered = !isNaN(now) && stopLoss > 0 && now <= stopLoss;
+
+            // 情况A：达到目标价后卖出（最优秀）
+            if (stats.sold && stats.soldReason === 'target') {
+                totalScore += 40;
+                details.push({ icon: '✅', text: '达标后卖出', score: '+40', rule: '达到目标价并卖出得40分' });
+            }
+            // 情况B：达到目标价后继续持有（可接受）
+            else if (targetReached) {
+                // 检查达到多久了
+                if (stats.targetReachedDate) {
+                    const reachedDate = new Date(stats.targetReachedDate);
+                    const today = new Date();
+                    const daysSinceReached = Math.floor((today - reachedDate) / (1000 * 60 * 60 * 24));
+
+                    if (daysSinceReached <= 2) {
+                        totalScore += 30;
+                        details.push({ icon: '⚠️', text: '达标后持有(≤2天)', score: '+30', rule: '达标后持有≤2天得30分' });
+                    } else if (daysSinceReached <= 5) {
+                        totalScore += 25;
+                        details.push({ icon: '⚠️', text: '达标后持有(≤5天)', score: '+25', rule: '达标后持有≤5天得25分' });
+                    } else {
+                        totalScore += 20;
+                        details.push({ icon: '⚠️', text: '达标后持有(>5天)', score: '+20', rule: '达标后持有>5天得20分' });
+                    }
+                } else {
+                    // 首次达到目标价
+                    if (!stats.targetReached) {
+                        stats.targetReached = true;
+                        stats.targetReachedDate = new Date().toISOString().split('T')[0];
+                        saveStocks();
+                    }
+                    totalScore += 30;
+                    details.push({ icon: '⚠️', text: '已达目标价', score: '+30', rule: '首次达到目标价得30分' });
+                }
+            }
+            // 情况C：触发止损（必须记录）
+            else if (stopLossTriggered) {
+                if (stats.sold && stats.soldReason === 'stoploss') {
+                    totalScore += 30;
+                    details.push({ icon: '⚠️', text: '止损执行', score: '+30', rule: '触发止损并卖出得30分' });
+                } else if (stats.stopLossTriggered) {
+                    totalScore -= 10;
+                    details.push({ icon: '❌', text: '止损未执行', score: '-10', rule: '触发止损但未卖出-10分' });
+                } else {
+                    // 首次触发止损
+                    if (!stats.stopLossTriggered) {
+                        stats.stopLossTriggered = true;
+                        stats.stopLossTriggeredDate = new Date().toISOString().split('T')[0];
+                        saveStocks();
+                    }
+                    totalScore += 30;
+                    details.push({ icon: '⚠️', text: '已触发止损', score: '+30', rule: '触发止损得30分（请尽快卖出）' });
+                }
+            }
+            // 情况D：未达目标也未止损删除（提前卖出）
+            else if (stats.sold && stats.soldReason === 'other') {
+                if (stats.soldNote && stats.soldNote.trim()) {
+                    totalScore += 10;
+                    details.push({ icon: '⚠️', text: '提前卖出(有说明)', score: '+10', rule: '提前卖出但有合理理由得10分' });
+                } else {
+                    totalScore -= 10;
+                    details.push({ icon: '❌', text: '提前卖出', score: '-10', rule: '提前卖出无理由-10分' });
+                }
+            }
+            // 情况E：按计划持有中
+            else {
+                totalScore += 35;
+                details.push({ icon: '✅', text: '按计划持有', score: '+35', rule: '持有中未达目标未触发止损得35分' });
+            }
+
+            return { score: totalScore, details, ratio };
+        }
+
+        // 隐蔽模式下替换预测趋势的彩色图标
+        function formatPredictionForStealthMode(prediction, predictionClass) {
+            if (!stealthMode) return prediction;
+            if (prediction === '--') return prediction;
+
+            // 将彩色图标替换为文字描述
+            const iconMap = {
+                '📈': '上涨',
+                '📉': '下跌',
+                '⚠️': '注意',
+                '↗️': '上涨',
+                '↘️': '下跌',
+                '➡️': '震荡'
+            };
+
+            let result = prediction;
+            for (const [icon, text] of Object.entries(iconMap)) {
+                result = result.replace(icon, text);
+            }
+
+            return result;
+        }
+
+        // 渲染纪律评分徽章
+        function renderDisciplineScore(stock, riskRewardRatio, yieldToTarget, yieldToStop, marketValue) {
+            const { score, details, ratio } = calculateDisciplineScore(stock, riskRewardRatio, yieldToTarget, yieldToStop, marketValue);
+
+            // 计算星级（隐蔽模式下不显示星级）
+            let stars = '';
+            if (!stealthMode) {
+                if (score >= 90) stars = '⭐⭐⭐⭐⭐';
+                else if (score >= 80) stars = '⭐⭐⭐⭐';
+                else if (score >= 70) stars = '⭐⭐⭐';
+                else if (score >= 60) stars = '⭐⭐';
+                else stars = '⭐';
+            }
+
+            // 颜色（隐蔽模式下统一为灰色）
+            let colorClass = 'gray';
+            if (!stealthMode) {
+                if (score >= 90) colorClass = 'red';
+                else if (score >= 70) colorClass = 'red';
+                else if (score >= 60) colorClass = 'gray';
+                else colorClass = 'green';
+            }
+
+            // 生成详细提示（多行显示）
+            const tooltipItems = details.map(d => `${d.icon} ${d.text}: ${d.score}分`);
+            const tooltip = `🎯 交易纪律评分: ${score}分 ${stars}\n📋 评分细则:\n${tooltipItems.join('\n')}`;
+
+            return `<td class="${colorClass} price-tooltip" data-tooltip="${tooltip}" style="font-weight: 500; cursor: help; font-size: 11px; white-space: pre-line;">${score}分 ${stars}</td>`;
+        }
+
+        // 生成建议
+        function generateAdvice(score, ratio) {
+            if (score >= 90) return '🎉 交易系统完善，继续保持！';
+            if (score >= 80) return '👍 纪律良好，可以尝试提高盈亏比至5:1以上。';
+            if (score >= 70) return '📊 基础扎实，注意按计划执行。';
+            if (score >= 60) return '⚠️ 需要改进，建议优化交易计划。';
+
+            // 低于60分
+            if (ratio < 5 && ratio >= 3) return '📈 提高盈亏比至5:1以上可获得更高评分。';
+            if (ratio < 3) return '❌ 盈亏比过低，建议重新评估风险收益比。';
+            return '🤔 建议复盘交易系统，完善交易计划。';
         }
 
         // 格式化成交量（手），根据涨跌幅和成交量的变化显示颜色
@@ -2343,7 +2664,72 @@
         // 删除股票
         function deleteStock(code, event) {
             event.stopPropagation();
-            if (confirm(`确定要删除 ${code} 吗？`)) {
+            const stock = stocks.find(s => s.code === code);
+            if (!stock) return;
+
+            // 打开卖出弹窗
+            openSellPopup(stock);
+        }
+
+        // 打开卖出弹窗
+        function openSellPopup(stock) {
+            document.getElementById('sellCode').value = stock.code;
+            document.getElementById('sellName').value = stock.name;
+
+            // 清空之前的选择
+            document.querySelectorAll('input[name="sellReason"]').forEach(input => {
+                input.checked = false;
+            });
+            document.getElementById('sellNote').value = '';
+            document.getElementById('sellNoteContainer').style.display = 'none';
+
+            document.getElementById('sellPopup').classList.add('active');
+        }
+
+        // 关闭卖出弹窗
+        function closeSellPopup() {
+            document.getElementById('sellPopup').classList.remove('active');
+        }
+
+        // 确认卖出
+        function confirmSell() {
+            const code = document.getElementById('sellCode').value;
+            const stock = stocks.find(s => s.code === code);
+            if (!stock) return;
+
+            const reason = document.querySelector('input[name="sellReason"]:checked')?.value;
+            const note = document.getElementById('sellNote').value.trim();
+
+            if (!reason) {
+                alert('请选择卖出原因');
+                return;
+            }
+
+            // 初始化 stats
+            if (!stock.stats) {
+                stock.stats = {};
+            }
+
+            // 记录卖出信息
+            stock.stats.sold = true;
+            stock.stats.soldDate = new Date().toISOString().split('T')[0];
+            stock.stats.soldReason = reason;
+            stock.stats.soldNote = note;
+            stock.stats.soldPrice = stock.now; // 记录卖出时的价格
+
+            // 保留股票在列表中，但标记为已卖出
+            stock.bonds = '0'; // 持仓清零
+
+            saveStocks();
+            renderStocks();
+
+            closeSellPopup();
+        }
+
+        // 真正删除股票（完全从列表移除）
+        function realDeleteStock(code, event) {
+            event.stopPropagation();
+            if (confirm(`确定要完全删除 ${code} 吗？\n删除后将无法恢复历史记录。`)) {
                 stocks = stocks.filter(s => s.code !== code);
                 saveStocks();
                 renderStocks();
@@ -2602,6 +2988,14 @@
             document.getElementById('editTargetPrice').value = stock.targetPrice && stock.targetPrice !== '--' ? stock.targetPrice : '';
             document.getElementById('editStopLoss').value = stock.stopLoss && stock.stopLoss !== '--' ? stock.stopLoss : '';
 
+            // 设置买入日期，如果没有则默认今天
+            if (stock.buyDate) {
+                document.getElementById('editBuyDate').value = stock.buyDate;
+            } else {
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('editBuyDate').value = today;
+            }
+
             document.getElementById('editPopup').querySelector('.chart-container').classList.add('edit-container');
             document.getElementById('editPopup').classList.add('active');
 
@@ -2630,11 +3024,13 @@
             const bonds = document.getElementById('editBonds').value.trim();
             const targetPrice = document.getElementById('editTargetPrice').value.trim();
             const stopLoss = document.getElementById('editStopLoss').value.trim();
+            const buyDate = document.getElementById('editBuyDate').value.trim();
 
             stock.cost = cost || '--';
             stock.bonds = bonds || '--';
             stock.targetPrice = targetPrice || '--';
             stock.stopLoss = stopLoss || '--';
+            stock.buyDate = buyDate || new Date().toISOString().split('T')[0];
 
             // 重新计算收益
             if (cost && cost !== '--' && parseFloat(cost) > 0) {
@@ -2710,7 +3106,14 @@
             const pageTitle = document.getElementById('pageTitle');
 
             btn.textContent = stealthMode ? '隐蔽模式: 开' : '隐蔽模式: 关';
-            btn.classList.toggle('active', stealthMode);
+
+            // 隐蔽模式下，隐蔽按钮本身也不显示为彩色
+            if (stealthMode) {
+                btn.classList.remove('active');
+            } else {
+                btn.classList.add('active');
+            }
+
             document.body.classList.toggle('stealth-mode', stealthMode);
 
             // 伪装窗口标题
@@ -2718,6 +3121,16 @@
                 pageTitle.textContent = '项目文档 - 工作资料';
             } else {
                 pageTitle.textContent = '马钱查看器 - Leeks';
+            }
+
+            // 隐蔽模式下，清空按钮和隐蔽按钮都不显示为彩色
+            const clearBtn = document.getElementById('clearBtn');
+            if (clearBtn) {
+                if (stealthMode) {
+                    clearBtn.classList.remove('delete-btn');
+                } else {
+                    clearBtn.classList.add('delete-btn');
+                }
             }
         }
 
