@@ -784,6 +784,8 @@
             display: inline-block;
             min-width: 70px;
             text-align: center;
+            white-space: normal;
+            line-height: 1.4;
         }
 
         .price-status.target {
@@ -1053,6 +1055,7 @@
                     <option value="profit">盈利</option>
                     <option value="loss">亏损</option>
                     <option value="target">已达目标</option>
+                    <option value="sold">卖出记录</option>
                 </select>
             </div>
         </div>
@@ -1590,6 +1593,9 @@
                         const targetPrice = parseFloat(stock.targetPrice);
                         if (!now || !targetPrice || now < targetPrice) return false;
                     }
+                    if (currentFilter === 'sold') {
+                        if (!stock.stats || !stock.stats.sold) return false;
+                    }
                 }
 
                 // 搜索过滤
@@ -1650,9 +1656,54 @@
                 }
             });
 
-            tbody.innerHTML = filteredStocks.map(stock => {
+            // 生成表格行
+            const rowsHtml = filteredStocks.map(stock => {
                 return `<tr data-code="${stock.code}" ondblclick="showChart('${stock.code}', 'min')" oncontextmenu="showContextMenu(event, '${stock.code}')">${renderTableCells(stock)}</tr>`;
             }).join('');
+
+            // 卖出记录汇总统计
+            if (currentFilter === 'sold' && filteredStocks.length > 0) {
+                const soldStats = calculateSoldStats(filteredStocks);
+                const summaryHtml = `
+                    <tr>
+                        <td colspan="${visibleColumns.length + 1}" style="background: #f8f9fa; padding: 15px;">
+                            <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 15px;">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px;">交易次数</div>
+                                    <div style="font-size: 18px; font-weight: bold; color: #2c3e50;">${soldStats.count}笔</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px;">平均持股天数</div>
+                                    <div style="font-size: 18px; font-weight: bold; color: #2c3e50;">${soldStats.avgHoldDays}天</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px;">平均收益率</div>
+                                    <div style="font-size: 18px; font-weight: bold; ${soldStats.avgIncomePercent >= 0 ? 'color: #e74c3c;' : 'color: #27ae60;'}">${soldStats.avgIncomePercent >= 0 ? '+' : ''}${soldStats.avgIncomePercent.toFixed(2)}%</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px;">总收益金额</div>
+                                    <div style="font-size: 18px; font-weight: bold; ${soldStats.totalIncome >= 0 ? 'color: #e74c3c;' : 'color: #27ae60;'}">${soldStats.totalIncome >= 0 ? '+' : ''}${soldStats.totalIncome.toFixed(2)}</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px;">盈利次数</div>
+                                    <div style="font-size: 18px; font-weight: bold; color: #e74c3c;">${soldStats.profitCount}次</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px;">亏损次数</div>
+                                    <div style="font-size: 18px; font-weight: bold; color: #27ae60;">${soldStats.lossCount}次</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 12px; color: #7f8c8d; margin-bottom: 5px;">胜率</div>
+                                    <div style="font-size: 18px; font-weight: bold; color: #3498db;">${soldStats.winRate.toFixed(1)}%</div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML = summaryHtml + rowsHtml;
+            } else {
+                tbody.innerHTML = rowsHtml;
+            }
 
             // 更新统计
             updateTotalStats();
@@ -1723,15 +1774,22 @@
             // 检查是否已卖出
             if (stock.stats && stock.stats.sold) {
                 priceStatus = 'neutral';
+                const holdDays = stock.stats.holdDays || 0;
+                const incomePercent = stock.stats.incomePercent || 0;
+                const incomeAmount = stock.stats.incomeAmount || 0;
+
                 if (stock.stats.soldReason === 'target') {
-                    statusText = '✅ 已达标卖出';
+                    statusText = `✅ 已达标卖出 ${holdDays}天`;
                     priceStatus = 'target';
                 } else if (stock.stats.soldReason === 'stoploss') {
-                    statusText = '🛡️ 已止损卖出';
+                    statusText = `🛡️ 已止损卖出 ${holdDays}天`;
                     priceStatus = 'stop';
                 } else {
-                    statusText = '📝 已卖出';
+                    statusText = `📝 已卖出 ${holdDays}天`;
                 }
+
+                // 添加收益率和收益金额信息
+                statusText += `<br/><span style="font-size: 11px;">${incomePercent >= 0 ? '+' : ''}${incomePercent.toFixed(2)}% (${incomeAmount >= 0 ? '+' : ''}${incomeAmount.toFixed(2)})</span>`;
             } else {
                 // 未卖出时的状态判断
                 if (!isNaN(now) && !isNaN(targetPrice) && targetPrice > 0) {
@@ -2191,6 +2249,40 @@
             }
 
             return result;
+        }
+
+        // 计算卖出统计数据
+        function calculateSoldStats(soldStocks) {
+            let totalHoldDays = 0;
+            let totalIncomePercent = 0;
+            let totalIncome = 0;
+            let profitCount = 0;
+            let lossCount = 0;
+
+            soldStocks.forEach(stock => {
+                if (stock.stats) {
+                    totalHoldDays += stock.stats.holdDays || 0;
+                    totalIncomePercent += stock.stats.incomePercent || 0;
+                    totalIncome += stock.stats.incomeAmount || 0;
+
+                    if (stock.stats.incomePercent > 0) {
+                        profitCount++;
+                    } else if (stock.stats.incomePercent < 0) {
+                        lossCount++;
+                    }
+                }
+            });
+
+            const count = soldStocks.length;
+            return {
+                count: count,
+                avgHoldDays: count > 0 ? Math.round(totalHoldDays / count) : 0,
+                avgIncomePercent: count > 0 ? totalIncomePercent / count : 0,
+                totalIncome: totalIncome,
+                profitCount: profitCount,
+                lossCount: lossCount,
+                winRate: count > 0 ? (profitCount / count * 100) : 0
+            };
         }
 
         // 渲染纪律评分徽章
@@ -2705,6 +2797,25 @@
                 return;
             }
 
+            // 计算持股天数
+            let holdDays = 0;
+            if (stock.buyDate) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const buyDate = new Date(stock.buyDate);
+                buyDate.setHours(0, 0, 0, 0);
+                const diffTime = today - buyDate;
+                holdDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                if (holdDays <= 0) holdDays = 1;
+            }
+
+            // 计算收益率和收益金额
+            const cost = parseFloat(stock.cost) || 0;
+            const soldPrice = parseFloat(stock.now) || 0;
+            const originalBonds = parseFloat(stock.bonds) || 0;
+            const incomePercent = cost > 0 ? ((soldPrice - cost) / cost * 100) : 0;
+            const incomeAmount = originalBonds * (soldPrice - cost);
+
             // 初始化 stats
             if (!stock.stats) {
                 stock.stats = {};
@@ -2715,7 +2826,10 @@
             stock.stats.soldDate = new Date().toISOString().split('T')[0];
             stock.stats.soldReason = reason;
             stock.stats.soldNote = note;
-            stock.stats.soldPrice = stock.now; // 记录卖出时的价格
+            stock.stats.soldPrice = soldPrice;
+            stock.stats.holdDays = holdDays;
+            stock.stats.incomePercent = incomePercent;
+            stock.stats.incomeAmount = incomeAmount;
 
             // 保留股票在列表中，但标记为已卖出
             stock.bonds = '0'; // 持仓清零
