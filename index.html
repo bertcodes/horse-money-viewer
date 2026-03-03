@@ -60,7 +60,7 @@
         }
 
         .refresh-info {
-            color: #7f8c8d;
+            color: #7f8c8d;5
             font-size: 12px;
             margin-left: 15px;
         }
@@ -500,7 +500,45 @@
             color: #7f8c8d !important;
         }
 
-        /* 工具栏 */
+        /* 隐蔽模式下的交易纪律面板 */
+        body.stealth-mode .trading-discipline-panel {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%) !important;
+            box-shadow: 0 2px 8px rgba(127, 140, 141, 0.3) !important;
+        }
+
+        body.stealth-mode .trading-discipline-header {
+            color: #ecf0f1 !important;
+        }
+
+        body.stealth-mode .discipline-content {
+            background: #fafafa !important;
+        }
+
+        body.stealth-mode .discipline-item {
+            background: #f0f0f0 !important;
+        }
+
+        body.stealth-mode .discipline-item:hover {
+            background: #e8e8e8 !important;
+        }
+
+        body.stealth-mode .discipline-add-btn {
+            background: #95a5a6 !important;
+        }
+
+        body.stealth-mode .discipline-add-btn:hover {
+            background: #7f8c8d !important;
+        }
+
+        body.stealth-mode .discipline-status {
+            background: #e0e0e0 !important;
+            color: #7f8c8d !important;
+        }
+
+        body.stealth-mode .delete-btn {
+            color: #95a5a6;
+            border-color: #95a5a6;
+        }
         .toolbar {
             display: flex;
             justify-content: space-between;
@@ -546,6 +584,184 @@
         .delete-btn:hover {
             background: #e74c3c;
             color: white;
+        }
+
+        /* 交易纪律检查面板 */
+        .trading-discipline-panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .trading-discipline-panel.collapsed .discipline-content {
+            display: none;
+        }
+
+        .trading-discipline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            color: white;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .trading-discipline-header:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .trading-discipline-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .trading-discipline-icon {
+            font-size: 18px;
+        }
+
+        .trading-discipline-toggle {
+            font-size: 12px;
+            opacity: 0.8;
+            transition: transform 0.3s;
+        }
+
+        .trading-discipline-panel.collapsed .trading-discipline-toggle {
+            transform: rotate(-90deg);
+        }
+
+        .discipline-content {
+            background: white;
+            padding: 15px;
+        }
+
+        .discipline-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .discipline-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px;
+            border-radius: 5px;
+            background: #f8f9fa;
+            transition: background 0.2s;
+        }
+
+        .discipline-item:hover {
+            background: #e9ecef;
+        }
+
+        .discipline-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .discipline-item label {
+            flex: 1;
+            font-size: 13px;
+            color: #333;
+            cursor: pointer;
+            line-height: 1.4;
+        }
+
+        .discipline-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .discipline-add-btn {
+            padding: 5px 12px;
+            font-size: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .discipline-add-btn:hover {
+            background: #5568d3;
+        }
+
+        .discipline-status {
+            font-size: 12px;
+            color: #6c757d;
+            padding: 5px 10px;
+            background: #e9ecef;
+            border-radius: 4px;
+        }
+
+        /* 编辑弹窗中的交易纪律检查 */
+        .edit-discipline-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        .edit-discipline-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #e74c3c;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .edit-discipline-list {
+            display: grid;
+            gap: 8px;
+        }
+
+        .edit-discipline-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 8px;
+            background: #fff3f3;
+            border-radius: 5px;
+            border-left: 3px solid #e74c3c;
+        }
+
+        .edit-discipline-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin-top: 1px;
+            cursor: pointer;
+            accent-color: #e74c3c;
+        }
+
+        .edit-discipline-item label {
+            flex: 1;
+            font-size: 12px;
+            color: #333;
+            cursor: pointer;
+            line-height: 1.4;
+        }
+
+        .discipline-warning {
+            font-size: 11px;
+            color: #e74c3c;
+            margin-top: 8px;
+            padding: 6px 10px;
+            background: #ffe5e5;
+            border-radius: 4px;
         }
 
         /* 图表弹窗 */
@@ -1043,6 +1259,39 @@
             <button class="toolbar-btn" onclick="toggleStealthMode()" id="stealthModeBtn">隐蔽</button>
         </div>
 
+        <!-- 交易纪律检查面板 -->
+        <div class="trading-discipline-panel" id="disciplinePanel">
+            <div class="trading-discipline-header" onclick="toggleDisciplinePanel()">
+                <div class="trading-discipline-title">
+                    <span class="trading-discipline-icon">📋</span>
+                    <span>交易纪律检查</span>
+                </div>
+                <span class="trading-discipline-toggle">▼</span>
+            </div>
+            <div class="discipline-content" id="disciplineContent">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 8px; font-size: 13px; color: #666; font-weight: 500;">选择交易策略：</label>
+                    <div style="display: flex; gap: 8px;">
+                        <select id="strategySelect" onchange="changeStrategy(this.value)"
+                                style="flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 13px; cursor: pointer; background: white;">
+                            <!-- 动态生成 -->
+                        </select>
+                        <button class="toolbar-btn" onclick="openStrategyManagement()" style="padding: 8px 12px; font-size: 13px;">管理策略</button>
+                    </div>
+                </div>
+                <div style="margin-bottom: 10px; padding: 8px; background: #f0f0f0; border-radius: 5px; font-size: 12px; color: #666; line-height: 1.5;" id="strategyDescription">
+                    <!-- 动态生成策略描述 -->
+                </div>
+                <div class="discipline-list" id="disciplineList">
+                    <!-- 动态生成 -->
+                </div>
+                <div class="discipline-actions">
+                    <button class="discipline-add-btn" onclick="addDisciplineItem()">+ 添加检查项</button>
+                    <span class="discipline-status" id="disciplineStatus"></span>
+                </div>
+            </div>
+        </div>
+
         <div class="toolbar">
             <div class="toolbar-left">
                 <button class="toolbar-btn delete-btn" id="clearBtn" onclick="clearAllStocks()">清空</button>
@@ -1133,7 +1382,7 @@
                     </div>
                     <div class="form-group">
                         <label>持仓数量</label>
-                        <input type="number" id="editBonds" placeholder="输入持仓数量，如: 100">
+                        <input type="number" id="editBonds" placeholder="输入持仓数量，如: 100" oninput="onBondsInputChange()">
                     </div>
                     <div class="form-group">
                         <label>目标价</label>
@@ -1147,6 +1396,32 @@
                         <label>买入日期</label>
                         <input type="date" id="editBuyDate">
                     </div>
+
+                    <!-- 交易纪律检查 -->
+                    <div class="edit-discipline-section" id="editDisciplineSection">
+                        <div class="edit-discipline-title" onclick="toggleEditDisciplineSection()" style="cursor: pointer;">
+                            <span>⚠️</span>
+                            <span>交易纪律检查</span>
+                            <span style="margin-left: auto; font-size: 12px; opacity: 0.6;" id="editDisciplineToggle">▼</span>
+                        </div>
+                        <div style="margin: 8px 0;">
+                            <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #666;">选择策略：</label>
+                            <select id="editStrategySelect" onchange="changeEditStrategy(this.value)"
+                                    style="width: 100%; padding: 6px 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 12px; cursor: pointer;">
+                                <!-- 动态生成 -->
+                            </select>
+                        </div>
+                        <div style="margin: 8px 0; padding: 8px; background: #f8f9fa; border-radius: 5px; font-size: 12px; color: #666;" id="editStrategyInfo">
+                            <!-- 动态生成策略信息 -->
+                        </div>
+                        <div class="edit-discipline-list" id="editDisciplineList">
+                            <!-- 动态生成 -->
+                        </div>
+                        <div class="discipline-warning" id="editDisciplineWarning">
+                            请确保已确认所有交易纪律检查项后再保存
+                        </div>
+                    </div>
+
                     <div class="form-buttons">
                         <button class="toolbar-btn" onclick="closeEditPopup()">取消</button>
                         <button class="toolbar-btn active" onclick="saveEdit()">保存</button>
@@ -1361,9 +1636,87 @@
             </div>
         </div>
 
+        <!-- 策略管理弹窗 -->
+        <div class="popup" id="strategyManagementPopup" style="display: none;">
+            <div class="popup-content" style="width: 700px; max-width: 90vw; max-height: 85vh; overflow-y: auto;">
+                <h3 style="margin-bottom: 20px;">策略管理</h3>
+
+                <div style="margin-bottom: 20px;">
+                    <button class="toolbar-btn active" onclick="showAddStrategyForm()" style="padding: 8px 16px;">+ 新增策略</button>
+                </div>
+
+                <div id="strategyManagementList" style="margin-bottom: 20px;">
+                    <!-- 动态生成策略列表 -->
+                </div>
+
+                <div id="addStrategyForm" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 15px;">新增策略</h4>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500;">策略名称</label>
+                        <input type="text" id="newStrategyName" placeholder="输入策略名称" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px;">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500;">策略描述</label>
+                        <textarea id="newStrategyDesc" placeholder="输入策略描述" rows="3" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; resize: vertical;"></textarea>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500;">主题颜色</label>
+                        <input type="color" id="newStrategyColor" value="#667eea" style="width: 60px; height: 35px; padding: 2px; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500;">检查项（每行一项）</label>
+                        <textarea id="newStrategyItems" placeholder="每行输入一个检查项" rows="6" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; resize: vertical;"></textarea>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="toolbar-btn" onclick="hideAddStrategyForm()">取消</button>
+                        <button class="toolbar-btn active" onclick="saveNewStrategy()">保存策略</button>
+                    </div>
+                </div>
+
+                <div id="editStrategyForm" style="display: none; padding: 20px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 15px;">编辑策略</h4>
+                    <input type="hidden" id="editStrategyId">
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500;">策略名称</label>
+                        <input type="text" id="editStrategyName" placeholder="输入策略名称" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px;">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500;">策略描述</label>
+                        <textarea id="editStrategyDesc" placeholder="输入策略描述" rows="3" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; resize: vertical;"></textarea>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500;">主题颜色</label>
+                        <input type="color" id="editStrategyColor" value="#667eea" style="width: 60px; height: 35px; padding: 2px; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500;">检查项（每行一项）</label>
+                        <textarea id="editStrategyItems" placeholder="每行输入一个检查项" rows="6" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; resize: vertical;"></textarea>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="toolbar-btn" onclick="hideEditStrategyForm()">取消</button>
+                        <button class="toolbar-btn active" onclick="updateStrategy()">更新策略</button>
+                    </div>
+                </div>
+
+                <div style="text-align: center;">
+                    <button class="toolbar-btn" onclick="closeStrategyManagement()" style="padding: 10px 30px; background: #f0f0f0;">关闭</button>
+                </div>
+            </div>
+        </div>
+
     <script>
         // 股票数据存储
         let stocks = JSON.parse(localStorage.getItem('leeks_stocks') || '[]');
+
+        // 当前选中的策略ID
+        let currentStrategyId = localStorage.getItem('leeks_current_strategy') || '95-mode';
+
+        // 为旧股票数据添加默认策略
+        stocks.forEach(stock => {
+            if (!stock.strategy) {
+                stock.strategy = currentStrategyId;
+            }
+        });
         let autoRefreshEnabled = localStorage.getItem('leeks_auto_refresh') !== 'false';
         let stealthMode = localStorage.getItem('leeks_stealth_mode') === 'true';
         let sortColumn = localStorage.getItem('leeks_sort_column') || 'code';
@@ -1372,6 +1725,70 @@
         let currentChartStock = null;
         let currentFilter = 'all';
         let searchText = '';
+
+        // 交易纪律检查
+        // 交易策略模板
+        const tradingStrategies = JSON.parse(localStorage.getItem('leeks_trading_strategies') || JSON.stringify([
+            {
+                id: '95-mode',
+                name: '九五模式',
+                color: '#667eea',
+                description: '核心是"95线"交易法，专注日线级别突破，收盘破位必须执行。适合捕捉趋势性行情。',
+                items: [
+                    { id: 1, text: '选股：必须是龙头、热点', checked: false },
+                    { id: 2, text: '择时：大盘环境好', checked: false },
+                    { id: 3, text: '执行：收盘破位必须走', checked: false },
+                    { id: 4, text: '盘中处理：盘中跌破但3日线未破可暂时持有', checked: false },
+                    { id: 5, text: '周期：只看日线级别，30/60分钟图无参考价值', checked: false },
+                    { id: 6, text: '买入条件：股价向上突破95线', checked: false },
+                    { id: 7, text: '买入时机：收盘前确认当天股价将稳稳站上95线', checked: false },
+                    { id: 8, text: '止损原则：收盘下穿95线一定要走', checked: false }
+                ]
+            },
+            {
+                id: 'beauty-model',
+                name: '大美女模型',
+                color: '#e74c3c',
+                description: '基于形态分析的颈线突破策略，关注放量突破和黄金分割位。适合中长期持有的波段交易。',
+                items: [
+                    { id: 1, text: '突破买点：放量突破颈线3%以上', checked: false },
+                    { id: 2, text: '回踩买点：回踩到黄金分割位附近再介入', checked: false },
+                    { id: 3, text: '确认买点：突破后观察3日，收盘价稳站颈线之上', checked: false },
+                    { id: 4, text: '目标位：从颈线位向上翻倍', checked: false },
+                    { id: 5, text: '止损：跌破颈线位必须立即离场', checked: false },
+                    { id: 6, text: '形态有效性：形成时间过长（七八年）则有效性降低', checked: false },
+                    { id: 7, text: '耐心持有：颈线上方横盘不涨可保持耐心', checked: false }
+                ]
+            }
+        ]));
+
+        // 当前策略的检查项
+        let disciplineItems = [];
+
+        // 获取当前策略
+        function getCurrentStrategy() {
+            return tradingStrategies.find(s => s.id === currentStrategyId) || tradingStrategies[0];
+        }
+
+        // 初始化检查项
+        function initDisciplineItems() {
+            const strategy = getCurrentStrategy();
+            if (strategy && strategy.items) {
+                // 从localStorage加载已保存的勾选状态
+                const savedCheckedState = JSON.parse(localStorage.getItem('leeks_discipline_checked_state') || '{}');
+
+                disciplineItems = JSON.parse(JSON.stringify(strategy.items)).map(item => ({
+                    ...item,
+                    checked: savedCheckedState[currentStrategyId] && savedCheckedState[currentStrategyId][item.id] !== undefined
+                        ? savedCheckedState[currentStrategyId][item.id]
+                        : false
+                }));
+            } else {
+                disciplineItems = [];
+            }
+        }
+
+        let editingStockCode = null;
         let refreshInterval = parseInt(localStorage.getItem('leeks_refresh_interval')) || 10; // 默认10秒
         let searchTimeout = null;
 
@@ -1530,6 +1947,14 @@
             document.getElementById('refreshIntervalInput').value = refreshInterval;
             renderStocks();
             refreshStocks();
+
+            // 初始化交易纪律面板
+            initDisciplineItems();
+            renderStrategySelect();
+            renderStrategyDescription();
+            renderDisciplineList();
+            updatePanelColor();
+            restoreDisciplinePanelState();
 
             // 启动自动刷新
             startAutoRefresh();
@@ -2501,6 +2926,17 @@
                 return;
             }
 
+            // 交易纪律检查:如果有持仓,需要确认所有检查项
+            if (bonds && bonds !== '--' && parseFloat(bonds) > 0) {
+                const allConfirmed = checkAllDisciplineConfirmed();
+                if (!allConfirmed) {
+                    const unchecked = disciplineItems.filter(item => !item.checked).length;
+                    if (!confirm(`还有 ${unchecked} 项交易纪律未确认，确定要添加吗？\n\n建议打开交易纪律检查面板，仔细确认后再添加。`)) {
+                        return;
+                    }
+                }
+            }
+
             stocks.push({
                 code,
                 name: '--',
@@ -2515,7 +2951,8 @@
                 incomePercent: '--',
                 income: '--',
                 targetPrice: '--',
-                stopLoss: '--'
+                stopLoss: '--',
+                strategy: currentStrategyId  // 关联当前策略
             });
 
             saveStocks();
@@ -3115,9 +3552,6 @@
             menu.classList.add('active');
         }
 
-        // 编辑相关功能
-        let editingStockCode = null;
-
         // 打开编辑弹窗
         function openEditPopup(code) {
             editingStockCode = code;
@@ -3143,10 +3577,84 @@
             document.getElementById('editPopup').querySelector('.chart-container').classList.add('edit-container');
             document.getElementById('editPopup').classList.add('active');
 
+            // 始终显示交易纪律检查区域（包含策略选择器）
+            const disciplineSection = document.getElementById('editDisciplineSection');
+            disciplineSection.style.display = 'block';
+            // 渲染策略选择器（包含"不配置策略"选项）
+            renderEditStrategySelect(stock.strategy);
+            // 根据股票的策略加载对应的检查项
+            loadStockStrategy(stock.strategy);
+            renderEditDisciplineList();
+            updateEditDisciplineWarning();
+
+            // 如果没有持仓，折叠检查项列表
+            const bondsValue = stock.bonds && stock.bonds !== '--' ? parseFloat(stock.bonds) : 0;
+            if (bondsValue <= 0) {
+                const list = document.getElementById('editDisciplineList');
+                const warning = document.getElementById('editDisciplineWarning');
+                const toggle = document.getElementById('editDisciplineToggle');
+                if (list && warning && toggle) {
+                    list.style.display = 'none';
+                    warning.style.display = 'none';
+                    toggle.textContent = '▶';
+                    toggle.style.transform = 'rotate(-90deg)';
+                }
+            }
+
             // 聚焦到成本价输入框
             setTimeout(() => {
                 document.getElementById('editCost').focus();
             }, 100);
+        }
+
+        // 根据股票的策略加载对应的检查项
+        function loadStockStrategy(strategyId) {
+            // 如果股票没有策略或选择"不配置策略"，清空检查项
+            if (!strategyId || strategyId === 'none') {
+                disciplineItems = [];
+                return;
+            }
+
+            const strategy = tradingStrategies.find(s => s.id === strategyId);
+            if (strategy) {
+                disciplineItems = JSON.parse(JSON.stringify(strategy.items)).map(item => ({
+                    ...item,
+                    checked: false
+                }));
+            } else {
+                // 如果找不到策略,使用默认策略
+                const defaultStrategy = tradingStrategies[0];
+                if (defaultStrategy) {
+                    disciplineItems = JSON.parse(JSON.stringify(defaultStrategy.items)).map(item => ({
+                        ...item,
+                        checked: false
+                    }));
+                }
+            }
+        }
+
+        // 在编辑弹窗中切换策略
+        function changeEditStrategy(strategyId) {
+            loadStockStrategy(strategyId);
+            renderEditDisciplineList();
+            updateEditDisciplineWarning();
+        }
+
+        // 持仓数量输入变化时自动展开交易纪律检查区域
+        function onBondsInputChange() {
+            const bondsInput = document.getElementById('editBonds');
+            const bondsValue = bondsInput.value ? parseFloat(bondsInput.value) : 0;
+
+            const list = document.getElementById('editDisciplineList');
+            const warning = document.getElementById('editDisciplineWarning');
+            const toggle = document.getElementById('editDisciplineToggle');
+
+            if (bondsValue > 0 && list && warning && toggle) {
+                list.style.display = 'grid';
+                warning.style.display = 'block';
+                toggle.textContent = '▼';
+                toggle.style.transform = 'rotate(0deg)';
+            }
         }
 
         // 关闭编辑弹窗
@@ -3161,15 +3669,48 @@
         function saveEdit() {
             if (!editingStockCode) return;
 
+            // 交易纪律检查:如果有持仓且配置了策略,需要确认所有检查项
+            const bonds = document.getElementById('editBonds').value.trim();
+            const disciplineSection = document.getElementById('editDisciplineSection');
+            const strategyId = document.getElementById('editStrategySelect')?.value || currentStrategyId;
+
+            // 检查是否配置了策略（strategyId不为空且不是'none'）
+            const hasStrategy = strategyId && strategyId !== 'none';
+
+            if (bonds && bonds !== '--' && parseFloat(bonds) > 0 && hasStrategy) {
+                // 确保交易纪律检查区域可见且展开
+                if (disciplineSection) {
+                    disciplineSection.style.display = 'block';
+                    const list = document.getElementById('editDisciplineList');
+                    const warning = document.getElementById('editDisciplineWarning');
+                    const toggle = document.getElementById('editDisciplineToggle');
+                    if (list && warning && toggle) {
+                        list.style.display = 'grid';
+                        warning.style.display = 'block';
+                        toggle.textContent = '▼';
+                        toggle.style.transform = 'rotate(0deg)';
+                    }
+                }
+
+                const allConfirmed = checkAllDisciplineConfirmed();
+                if (!allConfirmed) {
+                    const unchecked = disciplineItems.filter(item => !item.checked).length;
+                    if (!confirm(`还有 ${unchecked} 项交易纪律未确认，确定要保存吗？\n\n建议仔细检查后再保存，避免违反交易纪律。`)) {
+                        return;
+                    }
+                }
+            }
+
             const stock = stocks.find(s => s.code === editingStockCode);
             if (!stock) return;
 
             const cost = document.getElementById('editCost').value.trim();
-            const bonds = document.getElementById('editBonds').value.trim();
             const targetPrice = document.getElementById('editTargetPrice').value.trim();
             const stopLoss = document.getElementById('editStopLoss').value.trim();
             const buyDate = document.getElementById('editBuyDate').value.trim();
 
+            // 如果选择了"不配置策略"，则保存为空
+            stock.strategy = hasStrategy ? strategyId : '';
             stock.cost = cost || '--';
             stock.bonds = bonds || '--';
             stock.targetPrice = targetPrice || '--';
@@ -3275,6 +3816,12 @@
                 } else {
                     clearBtn.classList.add('delete-btn');
                 }
+            }
+
+            // 隐蔽模式下，隐藏交易纪律标题前的图标
+            const disciplineIcon = document.querySelector('.trading-discipline-icon');
+            if (disciplineIcon) {
+                disciplineIcon.style.display = stealthMode ? 'none' : 'inline';
             }
         }
 
@@ -3951,6 +4498,578 @@
             }
 
             broadcastVoice();
+        }
+
+        // ==================== 交易纪律检查功能 ====================
+
+        // 渲染策略选择器
+        function renderStrategySelect() {
+            const select = document.getElementById('strategySelect');
+            if (!select) return;
+
+            select.innerHTML = tradingStrategies.map(strategy => `
+                <option value="${strategy.id}" ${strategy.id === currentStrategyId ? 'selected' : ''}>${strategy.name}</option>
+            `).join('');
+        }
+
+        // 渲染编辑弹窗中的策略选择器（包含"不配置策略"选项）
+        function renderEditStrategySelect(selectedStrategyId) {
+            const select = document.getElementById('editStrategySelect');
+            if (!select) return;
+
+            let options = `<option value="none" ${!selectedStrategyId || selectedStrategyId === 'none' ? 'selected' : ''}>不配置策略</option>`;
+            options += tradingStrategies.map(strategy => `
+                <option value="${strategy.id}" ${strategy.id === selectedStrategyId ? 'selected' : ''}>${strategy.name}</option>
+            `).join('');
+
+            select.innerHTML = options;
+        }
+
+        // 渲染策略描述
+        function renderStrategyDescription() {
+            const desc = document.getElementById('strategyDescription');
+            if (!desc) return;
+
+            const strategy = getCurrentStrategy();
+            desc.innerHTML = `<strong>${strategy.name}</strong>：${strategy.description}`;
+        }
+
+        // 切换策略
+        function changeStrategy(strategyId) {
+            currentStrategyId = strategyId;
+            localStorage.setItem('leeks_current_strategy', strategyId);
+
+            // 重新初始化检查项
+            initDisciplineItems();
+
+            // 更新UI
+            renderStrategyDescription();
+            renderDisciplineList();
+            updatePanelColor();
+
+            // 保存策略数据
+            saveTradingStrategies();
+        }
+
+        // 更新面板颜色
+        function updatePanelColor() {
+            const strategy = getCurrentStrategy();
+            const panel = document.getElementById('disciplinePanel');
+
+            if (panel) {
+                panel.style.background = `linear-gradient(135deg, ${strategy.color} 0%, ${adjustColor(strategy.color, -20)} 100%)`;
+                panel.style.boxShadow = `0 2px 8px ${strategy.color}4d`;
+            }
+        }
+
+        // 调整颜色亮度
+        function adjustColor(color, amount) {
+            const hex = color.replace('#', '');
+            const num = parseInt(hex, 16);
+            const r = Math.min(255, Math.max(0, (num >> 16) + amount));
+            const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + amount));
+            const b = Math.min(255, Math.max(0, (num & 0x0000FF) + amount));
+            return `#${(1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1)}`;
+        }
+
+        // 渲染交易纪律检查列表
+        function renderDisciplineList() {
+            const list = document.getElementById('disciplineList');
+            if (!list) return;
+
+            list.innerHTML = disciplineItems.map(item => `
+                <div class="discipline-item">
+                    <input type="checkbox" id="discipline_${item.id}" ${item.checked ? 'checked' : ''} onchange="toggleDisciplineItem(${item.id})">
+                    <label for="discipline_${item.id}">${item.text}</label>
+                    <button class="delete-btn" style="background:none; border:none; cursor:pointer; padding:2px 8px; font-size:12px;" onclick="deleteDisciplineItem(${item.id})">删除</button>
+                </div>
+            `).join('');
+
+            updateDisciplineStatus();
+        }
+
+        // 更新交易纪律状态
+        function updateDisciplineStatus() {
+            const status = document.getElementById('disciplineStatus');
+            if (!status) return;
+
+            const total = disciplineItems.length;
+            const checked = disciplineItems.filter(item => item.checked).length;
+
+            if (checked === 0) {
+                status.textContent = `${total} 项未检查`;
+                status.style.background = '#e9ecef';
+            } else if (checked === total) {
+                status.textContent = `${checked}/${total} 全部已确认`;
+                status.style.background = '#d4edda';
+                status.style.color = '#155724';
+            } else {
+                status.textContent = `${checked}/${total} 已确认`;
+                status.style.background = '#fff3cd';
+                status.style.color = '#856404';
+            }
+
+            saveDisciplineItems();
+        }
+
+        // 保存交易策略
+        function saveTradingStrategies() {
+            localStorage.setItem('leeks_trading_strategies', JSON.stringify(tradingStrategies));
+        }
+
+        // 保存交易纪律项
+        function saveDisciplineItems() {
+            // 保存勾选状态到localStorage
+            const savedCheckedState = JSON.parse(localStorage.getItem('leeks_discipline_checked_state') || '{}');
+
+            if (!savedCheckedState[currentStrategyId]) {
+                savedCheckedState[currentStrategyId] = {};
+            }
+
+            // 为每个检查项保存勾选状态
+            disciplineItems.forEach(item => {
+                savedCheckedState[currentStrategyId][item.id] = item.checked;
+            });
+
+            localStorage.setItem('leeks_discipline_checked_state', JSON.stringify(savedCheckedState));
+
+            // 同时保存到策略模板中（用于策略编辑）
+            const strategy = getCurrentStrategy();
+            strategy.items = disciplineItems.map(item => ({...item}));
+            saveTradingStrategies();
+        }
+
+        // 切换交易纪律项
+        function toggleDisciplineItem(id) {
+            const item = disciplineItems.find(item => item.id === id);
+            if (item) {
+                item.checked = !item.checked;
+                saveDisciplineItems();
+                renderDisciplineList();
+            }
+        }
+
+        // 添加检查项
+        function addDisciplineItem() {
+            const text = prompt('请输入新的检查项：');
+            if (!text || !text.trim()) return;
+
+            const newId = disciplineItems.length > 0 ? Math.max(...disciplineItems.map(item => item.id)) + 1 : 1;
+            disciplineItems.push({
+                id: newId,
+                text: text.trim(),
+                checked: false
+            });
+
+            saveDisciplineItems();
+            renderDisciplineList();
+        }
+
+        // 删除检查项
+        function deleteDisciplineItem(id) {
+            if (!confirm('确定要删除这项检查吗？')) return;
+
+            const index = disciplineItems.findIndex(item => item.id === id);
+            if (index !== -1) {
+                disciplineItems.splice(index, 1);
+                saveDisciplineItems();
+                renderDisciplineList();
+            }
+        }
+
+        // 打开策略管理弹窗
+        function openStrategyManagement() {
+            document.getElementById('strategyManagementPopup').style.display = 'flex';
+            renderStrategyManagementList();
+        }
+
+        // 关闭策略管理弹窗
+        function closeStrategyManagement() {
+            document.getElementById('strategyManagementPopup').style.display = 'none';
+            hideAddStrategyForm();
+            hideEditStrategyForm();
+        }
+
+        // 渲染策略管理列表
+        function renderStrategyManagementList() {
+            const container = document.getElementById('strategyManagementList');
+            if (!container) return;
+
+            container.innerHTML = tradingStrategies.map(strategy => `
+                <div style="margin-bottom: 15px; padding: 15px; background: white; border: 1px solid #ddd; border-radius: 8px; border-left: 4px solid ${strategy.color};">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                        <div>
+                            <h4 style="margin: 0 0 5px 0; color: ${strategy.color};">${strategy.name}</h4>
+                            <p style="margin: 0; font-size: 12px; color: #666;">${strategy.description}</p>
+                        </div>
+                        <div>
+                            <button class="toolbar-btn" onclick="openEditStrategyForm('${strategy.id}')" style="padding: 5px 10px; font-size: 12px; margin-right: 5px;">编辑</button>
+                            <button class="toolbar-btn delete-btn" onclick="deleteStrategy('${strategy.id}')" style="padding: 5px 10px; font-size: 12px;">删除</button>
+                        </div>
+                    </div>
+                    <div style="font-size: 12px; color: #888;">
+                        <strong>检查项 (${strategy.items.length}项)：</strong>
+                        ${strategy.items.length > 0 ? strategy.items.map(item => item.text).join('、').substring(0, 100) + (strategy.items.map(item => item.text).join('、').length > 100 ? '...' : '') : '无'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 显示新增策略表单
+        function showAddStrategyForm() {
+            document.getElementById('addStrategyForm').style.display = 'block';
+            document.getElementById('editStrategyForm').style.display = 'none';
+            document.getElementById('newStrategyName').value = '';
+            document.getElementById('newStrategyDesc').value = '';
+            document.getElementById('newStrategyColor').value = '#667eea';
+            document.getElementById('newStrategyItems').value = '';
+        }
+
+        // 隐藏新增策略表单
+        function hideAddStrategyForm() {
+            document.getElementById('addStrategyForm').style.display = 'none';
+        }
+
+        // 保存新策略
+        function saveNewStrategy() {
+            const name = document.getElementById('newStrategyName').value.trim();
+            const description = document.getElementById('newStrategyDesc').value.trim();
+            const color = document.getElementById('newStrategyColor').value;
+            const itemsText = document.getElementById('newStrategyItems').value.trim();
+
+            if (!name) {
+                alert('请输入策略名称');
+                return;
+            }
+
+            // 生成唯一ID
+            const id = 'strategy-' + Date.now();
+
+            // 处理检查项
+            const items = [];
+            if (itemsText) {
+                const lines = itemsText.split('\n');
+                lines.forEach((line, index) => {
+                    const text = line.trim();
+                    if (text) {
+                        items.push({
+                            id: index + 1,
+                            text: text,
+                            checked: false
+                        });
+                    }
+                });
+            }
+
+            // 添加新策略
+            tradingStrategies.push({
+                id: id,
+                name: name,
+                color: color,
+                description: description || '自定义交易策略',
+                items: items
+            });
+
+            // 保存
+            saveTradingStrategies();
+
+            // 刷新UI
+            renderStrategySelect();
+            renderStrategyManagementList();
+
+            // 切换到新策略
+            changeStrategy(id);
+
+            // 隐藏表单
+            hideAddStrategyForm();
+
+            alert('策略添加成功！');
+        }
+
+        // 打开编辑策略表单
+        function openEditStrategyForm(strategyId) {
+            const strategy = tradingStrategies.find(s => s.id === strategyId);
+            if (!strategy) {
+                alert('策略不存在');
+                return;
+            }
+
+            document.getElementById('editStrategyForm').style.display = 'block';
+            document.getElementById('addStrategyForm').style.display = 'none';
+
+            document.getElementById('editStrategyId').value = strategy.id;
+            document.getElementById('editStrategyName').value = strategy.name;
+            document.getElementById('editStrategyDesc').value = strategy.description;
+            document.getElementById('editStrategyColor').value = strategy.color;
+            document.getElementById('editStrategyItems').value = strategy.items.map(item => item.text).join('\n');
+        }
+
+        // 隐藏编辑策略表单
+        function hideEditStrategyForm() {
+            document.getElementById('editStrategyForm').style.display = 'none';
+        }
+
+        // 更新策略
+        function updateStrategy() {
+            const id = document.getElementById('editStrategyId').value;
+            const name = document.getElementById('editStrategyName').value.trim();
+            const description = document.getElementById('editStrategyDesc').value.trim();
+            const color = document.getElementById('editStrategyColor').value;
+            const itemsText = document.getElementById('editStrategyItems').value.trim();
+
+            if (!name) {
+                alert('请输入策略名称');
+                return;
+            }
+
+            const strategyIndex = tradingStrategies.findIndex(s => s.id === id);
+            if (strategyIndex === -1) {
+                alert('策略不存在');
+                return;
+            }
+
+            // 处理检查项
+            const items = [];
+            if (itemsText) {
+                const lines = itemsText.split('\n');
+                lines.forEach((line, index) => {
+                    const text = line.trim();
+                    if (text) {
+                        items.push({
+                            id: index + 1,
+                            text: text,
+                            checked: false
+                        });
+                    }
+                });
+            }
+
+            // 更新策略
+            tradingStrategies[strategyIndex] = {
+                ...tradingStrategies[strategyIndex],
+                name: name,
+                description: description || '自定义交易策略',
+                color: color,
+                items: items
+            };
+
+            // 保存
+            saveTradingStrategies();
+
+            // 刷新UI
+            renderStrategySelect();
+            renderStrategyManagementList();
+
+            // 如果更新的是当前策略，刷新纪律列表
+            if (currentStrategyId === id) {
+                initDisciplineItems();
+                renderDisciplineList();
+                renderStrategyDescription();
+                updatePanelColor();
+            }
+
+            // 隐藏表单
+            hideEditStrategyForm();
+
+            alert('策略更新成功！');
+        }
+
+        // 删除策略
+        function deleteStrategy(strategyId) {
+            if (!confirm('确定要删除这个策略吗？删除后将无法恢复。')) {
+                return;
+            }
+
+            const strategyIndex = tradingStrategies.findIndex(s => s.id === strategyId);
+            if (strategyIndex === -1) {
+                alert('策略不存在');
+                return;
+            }
+
+            // 检查是否有股票使用该策略
+            const stocksUsingStrategy = stocks.filter(s => s.strategy === strategyId);
+            if (stocksUsingStrategy.length > 0) {
+                if (!confirm(`有 ${stocksUsingStrategy.length} 个股票正在使用此策略。删除后这些股票将自动关联到默认策略。确定要删除吗？`)) {
+                    return;
+                }
+                // 将使用该策略的股票改到第一个策略
+                const defaultStrategy = tradingStrategies[0];
+                if (defaultStrategy && defaultStrategy.id !== strategyId) {
+                    stocks.forEach(stock => {
+                        if (stock.strategy === strategyId) {
+                            stock.strategy = defaultStrategy.id;
+                        }
+                    });
+                    saveStocks();
+                }
+            }
+
+            // 删除策略
+            tradingStrategies.splice(strategyIndex, 1);
+            saveTradingStrategies();
+
+            // 如果删除的是当前策略，切换到第一个策略
+            if (currentStrategyId === strategyId) {
+                if (tradingStrategies.length > 0) {
+                    changeStrategy(tradingStrategies[0].id);
+                } else {
+                    currentStrategyId = '';
+                    localStorage.setItem('leeks_current_strategy', '');
+                    initDisciplineItems();
+                    renderDisciplineList();
+                }
+            }
+
+            // 刷新UI
+            renderStrategySelect();
+            renderStrategyManagementList();
+
+            alert('策略删除成功！');
+        }
+
+        // 切换交易纪律项
+        function toggleDisciplineItem(id) {
+            const item = disciplineItems.find(item => item.id === id);
+            if (item) {
+                item.checked = !item.checked;
+                updateDisciplineStatus();
+            }
+        }
+
+        // 添加交易纪律项
+        function addDisciplineItem() {
+            const text = prompt('请输入新的交易纪律检查项:');
+            if (text && text.trim()) {
+                const newId = Math.max(...disciplineItems.map(item => item.id), 0) + 1;
+                disciplineItems.push({
+                    id: newId,
+                    text: text.trim(),
+                    checked: false
+                });
+                renderDisciplineList();
+            }
+        }
+
+        // 删除交易纪律项
+        function deleteDisciplineItem(id) {
+            if (confirm('确定要删除这个检查项吗?')) {
+                disciplineItems = disciplineItems.filter(item => item.id !== id);
+                renderDisciplineList();
+            }
+        }
+
+        // 切换交易纪律面板显示/隐藏
+        function toggleDisciplinePanel() {
+            const panel = document.getElementById('disciplinePanel');
+            panel.classList.toggle('collapsed');
+            localStorage.setItem('leeks_discipline_collapsed', panel.classList.contains('collapsed'));
+        }
+
+        // 恢复交易纪律面板状态
+        function restoreDisciplinePanelState() {
+            const collapsed = localStorage.getItem('leeks_discipline_collapsed') === 'true';
+            const panel = document.getElementById('disciplinePanel');
+            if (collapsed) {
+                panel.classList.add('collapsed');
+            }
+
+            // 根据隐蔽模式状态设置图标显示
+            const disciplineIcon = document.querySelector('.trading-discipline-icon');
+            if (disciplineIcon) {
+                disciplineIcon.style.display = stealthMode ? 'none' : 'inline';
+            }
+        }
+
+        // 渲染编辑弹窗中的交易纪律检查
+        function renderEditDisciplineList() {
+            const list = document.getElementById('editDisciplineList');
+            const info = document.getElementById('editStrategyInfo');
+            if (!list) return;
+
+            // 显示当前策略信息
+            const strategy = tradingStrategies.find(s => s.items.some(item => item.id === disciplineItems[0]?.id)) ||
+                             tradingStrategies.find(s => s.id === currentStrategyId) ||
+                             tradingStrategies[0];
+
+            if (strategy && info) {
+                info.innerHTML = `<strong>当前策略：${strategy.name}</strong><br/>${strategy.description}`;
+            }
+
+            if (disciplineItems && disciplineItems.length > 0) {
+                list.innerHTML = disciplineItems.map(item => `
+                    <div class="edit-discipline-item">
+                        <input type="checkbox" id="edit_discipline_${item.id}" onchange="toggleEditDisciplineItem(${item.id})">
+                        <label for="edit_discipline_${item.id}">${item.text}</label>
+                    </div>
+                `).join('');
+
+                // 重置所有检查项为未选中
+                disciplineItems.forEach(item => item.checked = false);
+            } else {
+                list.innerHTML = '<div style="text-align:center; padding:20px; color:#999;">未配置交易策略，无需检查</div>';
+            }
+        }
+
+        // 切换编辑弹窗中的交易纪律项
+        function toggleEditDisciplineItem(id) {
+            const item = disciplineItems.find(item => item.id === id);
+            if (item) {
+                item.checked = !item.checked;
+                updateEditDisciplineWarning();
+            }
+        }
+
+        // 更新编辑弹窗中的警告信息
+        function updateEditDisciplineWarning() {
+            const warning = document.getElementById('editDisciplineWarning');
+            if (!warning) return;
+
+            // 如果没有检查项（不配置策略），不显示警告
+            if (disciplineItems.length === 0) {
+                warning.textContent = 'ℹ️ 当前未配置交易策略，不进行纪律检查';
+                warning.style.background = '#d1ecf1';
+                warning.style.color = '#0c5460';
+                return;
+            }
+
+            const unchecked = disciplineItems.filter(item => !item.checked);
+            if (unchecked.length === 0) {
+                warning.textContent = '✅ 所有交易纪律检查项已确认';
+                warning.style.background = '#d4edda';
+                warning.style.color = '#155724';
+            } else {
+                warning.textContent = `⚠️ 还有 ${unchecked.length} 项未确认，请仔细检查后再保存`;
+                warning.style.background = '#ffe5e5';
+                warning.style.color = '#e74c3c';
+            }
+        }
+
+        // 检查是否所有交易纪律都已确认
+        function checkAllDisciplineConfirmed() {
+            // 如果没有检查项（不配置策略），视为已确认
+            if (disciplineItems.length === 0) {
+                return true;
+            }
+            return disciplineItems.every(item => item.checked);
+        }
+
+        // 切换编辑弹窗中交易纪律部分的显示/隐藏
+        function toggleEditDisciplineSection() {
+            const list = document.getElementById('editDisciplineList');
+            const warning = document.getElementById('editDisciplineWarning');
+            const toggle = document.getElementById('editDisciplineToggle');
+
+            if (list.style.display === 'none') {
+                list.style.display = 'grid';
+                warning.style.display = 'block';
+                toggle.textContent = '▼';
+                toggle.style.transform = 'rotate(0deg)';
+            } else {
+                list.style.display = 'none';
+                warning.style.display = 'none';
+                toggle.textContent = '▶';
+                toggle.style.transform = 'rotate(-90deg)';
+            }
         }
     </script>
 </body>
