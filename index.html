@@ -485,6 +485,21 @@
             color: #95a5a6 !important;
         }
 
+        body.stealth-mode .price-status.target {
+            background: transparent !important;
+            color: #7f8c8d !important;
+        }
+
+        body.stealth-mode .price-status.stop {
+            background: transparent !important;
+            color: #7f8c8d !important;
+        }
+
+        body.stealth-mode .price-status.neutral {
+            background: transparent !important;
+            color: #7f8c8d !important;
+        }
+
         /* 工具栏 */
         .toolbar {
             display: flex;
@@ -1052,6 +1067,7 @@
                 <select id="filterSelect" onchange="filterByStatus(this.value)"
                         style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 13px; cursor: pointer;">
                     <option value="all">全部</option>
+                    <option value="holding">持有中</option>
                     <option value="profit">盈利</option>
                     <option value="loss">亏损</option>
                     <option value="target">已达目标</option>
@@ -1581,6 +1597,13 @@
             let filteredStocks = stocks.filter(stock => {
                 // 状态过滤
                 if (currentFilter !== 'all') {
+                    // 持有中筛选: 有持仓的股票(持仓数量>0且未卖出)
+                    if (currentFilter === 'holding') {
+                        // 如果已卖出,即使持仓数量>0也不显示
+                        if (stock.stats && stock.stats.sold) return false;
+                        // 持仓数量必须大于0
+                        if (!stock.bonds || stock.bonds === '--' || parseFloat(stock.bonds) <= 0) return false;
+                    }
                     // 盈利和亏损筛选只针对有持仓的股票
                     if (currentFilter === 'profit' || currentFilter === 'loss') {
                         if (!stock.bonds || stock.bonds === '--' || parseFloat(stock.bonds) <= 0) return false;
@@ -1730,6 +1753,7 @@
             const stopLoss = parseFloat(stock.stopLoss);
             let priceStatus = 'neutral';
             let statusText = '--';
+            let statusTooltip = '';
 
             // 计算目标价距离百分比
             let targetPercent = '--';
@@ -1782,14 +1806,20 @@
                     statusText = `✅ 已达标卖出 ${holdDays}天`;
                     priceStatus = 'target';
                 } else if (stock.stats.soldReason === 'stoploss') {
-                    statusText = `🛡️ 已止损卖出 ${holdDays}天`;
+                    statusText = `🛡️ 已止损卖出`;
                     priceStatus = 'stop';
                 } else {
                     statusText = `📝 已卖出 ${holdDays}天`;
                 }
 
-                // 添加收益率和收益金额信息
-                statusText += `<br/><span style="font-size: 11px;">${incomePercent >= 0 ? '+' : ''}${incomePercent.toFixed(2)}% (${incomeAmount >= 0 ? '+' : ''}${incomeAmount.toFixed(2)})</span>`;
+                // 为已止损状态添加悬浮提示(收益率和收益金额)
+                if (stock.stats.soldReason === 'stoploss') {
+                    statusTooltip = `收益率: ${incomePercent >= 0 ? '+' : ''}${incomePercent.toFixed(2)}%\n收益: ${incomeAmount >= 0 ? '+' : ''}${incomeAmount.toFixed(2)}\n持股天数: ${holdDays}天`;
+                } else if (stock.stats.soldReason === 'target') {
+                    statusTooltip = `收益率: ${incomePercent >= 0 ? '+' : ''}${incomePercent.toFixed(2)}%\n收益: ${incomeAmount >= 0 ? '+' : ''}${incomeAmount.toFixed(2)}\n持股天数: ${holdDays}天`;
+                } else {
+                    statusTooltip = `收益率: ${incomePercent >= 0 ? '+' : ''}${incomePercent.toFixed(2)}%\n收益: ${incomeAmount >= 0 ? '+' : ''}${incomeAmount.toFixed(2)}\n持股天数: ${holdDays}天`;
+                }
             } else {
                 // 未卖出时的状态判断
                 if (!isNaN(now) && !isNaN(targetPrice) && targetPrice > 0) {
@@ -1975,7 +2005,7 @@
                     data-tooltip="距离当前价: ${targetPercent !== '--' ? (targetPercent > 0 ? '+' : '') + targetPercent + '%' : '--'}">${stock.targetPrice || '--'}</td>`,
                 stopLoss: `<td class="editable price-tooltip" onclick="event.stopPropagation(); openEditPopup('${stock.code}')"
                     data-tooltip="距离当前价: ${stopLossPercent !== '--' ? (stopLossPercent > 0 ? '+' : '') + stopLossPercent + '%' : '--'}">${stock.stopLoss || '--'}</td>`,
-                status: `<td><span class="price-status ${priceStatus}">${statusText}</span></td>`,
+                status: `<td><span class="price-status ${priceStatus} ${statusTooltip ? 'price-tooltip' : ''}" ${statusTooltip ? `data-tooltip="${statusTooltip}"` : ''}>${statusText}</span></td>`,
                 yieldToTarget: `<td class="${yieldToTarget >= 0 ? 'red' : yieldToTarget < 0 ? 'green' : 'gray'}">${formatChangePercent(yieldToTarget)}</td>`,
                 yieldToStop: `<td class="${yieldToStop >= 0 ? 'red' : yieldToStop < 0 ? 'green' : 'gray'}">${formatChangePercent(yieldToStop)}</td>`,
                 riskRewardRatio: `<td class="price-tooltip" data-tooltip="${riskRewardRatio !== '--' ? '收益潜力是风险的 ' + riskRewardRatio.split(':')[0] + ' 倍' : '--'}">${riskRewardRatio}</td>`,
