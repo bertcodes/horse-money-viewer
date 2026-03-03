@@ -3215,7 +3215,7 @@
         // 修改刷新间隔
         function changeRefreshInterval(value) {
             let interval = parseInt(value);
-            if (isNaN(interval) || interval < 3) interval = 3;
+            if (isNaN(interval) || interval < 1) interval = 1;
             if (interval > 300) interval = 300;
             refreshInterval = interval;
             localStorage.setItem('leeks_refresh_interval', interval);
