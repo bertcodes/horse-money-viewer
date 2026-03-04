@@ -1782,7 +1782,7 @@
 
         // 交易纪律检查
         // 交易策略模板
-        const tradingStrategies = JSON.parse(localStorage.getItem('leeks_trading_strategies') || JSON.stringify([
+        let tradingStrategies = JSON.parse(localStorage.getItem('leeks_trading_strategies') || JSON.stringify([
             {
                 id: 'short-term-mode',
                 name: '短线模式',
