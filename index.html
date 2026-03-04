@@ -1784,34 +1784,17 @@
         // 交易策略模板
         const tradingStrategies = JSON.parse(localStorage.getItem('leeks_trading_strategies') || JSON.stringify([
             {
-                id: '95-mode',
-                name: '九五模式',
+                id: 'short-term-mode',
+                name: '短线模式',
                 color: '#667eea',
-                description: '核心是"95线"交易法，专注日线级别突破，收盘破位必须执行。适合捕捉趋势性行情。',
+                description: '专注日线级别突破,收盘破位必须执行。适合捕捉趋势性行情。',
                 items: [
-                    { id: 1, text: '选股：必须是龙头、热点', checked: false },
-                    { id: 2, text: '择时：大盘环境好', checked: false },
-                    { id: 3, text: '执行：收盘破位必须走', checked: false },
-                    { id: 4, text: '盘中处理：盘中跌破但3日线未破可暂时持有', checked: false },
-                    { id: 5, text: '周期：只看日线级别，30/60分钟图无参考价值', checked: false },
-                    { id: 6, text: '买入条件：股价向上突破95线', checked: false },
-                    { id: 7, text: '买入时机：收盘前确认当天股价将稳稳站上95线', checked: false },
-                    { id: 8, text: '止损原则：收盘下穿95线一定要走', checked: false }
-                ]
-            },
-            {
-                id: 'beauty-model',
-                name: '大美女模型',
-                color: '#e74c3c',
-                description: '基于形态分析的颈线突破策略，关注放量突破和黄金分割位。适合中长期持有的波段交易。',
-                items: [
-                    { id: 1, text: '突破买点：放量突破颈线3%以上', checked: false },
-                    { id: 2, text: '回踩买点：回踩到黄金分割位附近再介入', checked: false },
-                    { id: 3, text: '确认买点：突破后观察3日，收盘价稳站颈线之上', checked: false },
-                    { id: 4, text: '目标位：从颈线位向上翻倍', checked: false },
-                    { id: 5, text: '止损：跌破颈线位必须立即离场', checked: false },
-                    { id: 6, text: '形态有效性：形成时间过长（七八年）则有效性降低', checked: false },
-                    { id: 7, text: '耐心持有：颈线上方横盘不涨可保持耐心', checked: false }
+                    { id: 1, text: '选股:必须是龙头、热点', checked: false },
+                    { id: 2, text: '择时:大盘环境好', checked: false },
+                    { id: 3, text: '执行:收盘破位必须走', checked: false },
+                    { id: 4, text: '盘中处理:盘中跌破但3日线未破可暂时持有', checked: false },
+                    { id: 5, text: '买入条件:xxx', checked: false },
+                    { id: 6, text: '止损原则:xxx', checked: false }
                 ]
             }
         ]));
