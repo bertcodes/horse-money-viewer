@@ -1608,6 +1608,11 @@
                     </div>
 
                     <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #34495e; font-weight: 500;">卖出价格</label>
+                        <input type="number" id="sellPrice" placeholder="输入卖出价格，如: 1100" step="0.01" oninput="updateSellEstimatedIncome()" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
                         <label style="display: block; margin-bottom: 10px; font-size: 14px; color: #34495e; font-weight: 500;">卖出原因</label>
                         <label style="display: flex; align-items: center; margin-bottom: 10px; cursor: pointer;">
                             <input type="radio" name="sellReason" value="target" style="margin-right: 8px;">
@@ -1628,9 +1633,58 @@
                         <input type="text" id="sellNote" placeholder="请输入卖出原因，如: 需要资金周转、行情变化等" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
                     </div>
 
+                    <div style="margin-bottom: 20px; padding: 10px; background: #f0f0f0; border-radius: 5px; font-size: 12px;">
+                        <div><strong>预计收益：</strong><span id="sellEstimatedIncome">--</span></div>
+                        <div><strong>预计收益率：</strong><span id="sellEstimatedIncomePercent">--</span></div>
+                    </div>
+
                     <div style="display: flex; gap: 10px;">
                         <button class="toolbar-btn" onclick="closeSellPopup()" style="flex: 1;">取消</button>
                         <button class="toolbar-btn active" onclick="confirmSell()" style="flex: 1;">确认卖出</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 修改卖出价弹窗 -->
+        <div class="column-settings-popup" id="editSoldPricePopup" onclick="closeEditSoldPricePopup(event)">
+            <div class="column-settings-container" onclick="event.stopPropagation()" style="max-width: 400px;">
+                <div class="chart-header">
+                    <span class="chart-title">修改卖出价格</span>
+                    <button class="close-btn" onclick="closeEditSoldPricePopup()">×</button>
+                </div>
+                <div class="column-settings-content" style="padding: 20px;">
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #34495e; font-weight: 500;">股票代码</label>
+                        <input type="text" id="editSoldPriceCode" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #f5f5f5;">
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #34495e; font-weight: 500;">股票名称</label>
+                        <input type="text" id="editSoldPriceName" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #f5f5f5;">
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #34495e; font-weight: 500;">原卖出价格</label>
+                        <input type="text" id="editSoldPriceOldPrice" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #f5f5f5;">
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #34495e; font-weight: 500;">新卖出价格</label>
+                        <input type="number" id="editSoldPriceNewPrice" placeholder="输入新的卖出价格" step="0.01" oninput="updateEditSoldPricePreview()" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                    </div>
+
+                    <div style="margin-bottom: 20px; padding: 10px; background: #f0f0f0; border-radius: 5px; font-size: 12px;">
+                        <div><strong>原收益：</strong><span id="editSoldPriceOldIncome">--</span></div>
+                        <div><strong>原收益率：</strong><span id="editSoldPriceOldIncomePercent">--</span></div>
+                        <hr style="margin: 10px 0; border: none; border-top: 1px solid #ddd;">
+                        <div><strong>新收益：</strong><span id="editSoldPriceNewIncome">--</span></div>
+                        <div><strong>新收益率：</strong><span id="editSoldPriceNewIncomePercent">--</span></div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button class="toolbar-btn" onclick="closeEditSoldPricePopup()" style="flex: 1;">取消</button>
+                        <button class="toolbar-btn active" onclick="saveSoldPrice()" style="flex: 1;">保存</button>
                     </div>
                 </div>
             </div>
@@ -2238,12 +2292,13 @@
                 }
 
                 // 为已止损状态添加悬浮提示(收益率和收益金额)
+                const soldPrice = stock.stats.soldPrice || 0;
                 if (stock.stats.soldReason === 'stoploss') {
-                    statusTooltip = `收益率: ${incomePercent >= 0 ? '+' : ''}${incomePercent.toFixed(2)}%\n收益: ${incomeAmount >= 0 ? '+' : ''}${incomeAmount.toFixed(2)}\n持股天数: ${holdDays}天`;
+                    statusTooltip = `卖出价: ${soldPrice.toFixed(2)}\n收益率: ${incomePercent >= 0 ? '+' : ''}${incomePercent.toFixed(2)}%\n收益: ${incomeAmount >= 0 ? '+' : ''}${incomeAmount.toFixed(2)}\n持股天数: ${holdDays}天`;
                 } else if (stock.stats.soldReason === 'target') {
-                    statusTooltip = `收益率: ${incomePercent >= 0 ? '+' : ''}${incomePercent.toFixed(2)}%\n收益: ${incomeAmount >= 0 ? '+' : ''}${incomeAmount.toFixed(2)}\n持股天数: ${holdDays}天`;
+                    statusTooltip = `卖出价: ${soldPrice.toFixed(2)}\n收益率: ${incomePercent >= 0 ? '+' : ''}${incomePercent.toFixed(2)}%\n收益: ${incomeAmount >= 0 ? '+' : ''}${incomeAmount.toFixed(2)}\n持股天数: ${holdDays}天`;
                 } else {
-                    statusTooltip = `收益率: ${incomePercent >= 0 ? '+' : ''}${incomePercent.toFixed(2)}%\n收益: ${incomeAmount >= 0 ? '+' : ''}${incomeAmount.toFixed(2)}\n持股天数: ${holdDays}天`;
+                    statusTooltip = `卖出价: ${soldPrice.toFixed(2)}\n收益率: ${incomePercent >= 0 ? '+' : ''}${incomePercent.toFixed(2)}%\n收益: ${incomeAmount >= 0 ? '+' : ''}${incomeAmount.toFixed(2)}\n持股天数: ${holdDays}天`;
                 }
             } else {
                 // 未卖出时的状态判断
@@ -2443,7 +2498,7 @@
                 .map(col => cellMap[col.key] || '')
                 .join('') + `<td>
                     ${stock.stats && stock.stats.sold
-                        ? `<button class="toolbar-btn" onclick="realDeleteStock('${stock.code}', event)" style="font-size: 11px; padding: 4px 10px;">移除</button>`
+                        ? `<button class="toolbar-btn" onclick="editSoldPrice('${stock.code}', event)" style="font-size: 11px; padding: 4px 10px; margin-right: 5px;">修改卖价</button><button class="toolbar-btn delete-btn" onclick="realDeleteStock('${stock.code}', event)" style="font-size: 11px; padding: 4px 10px;">移除</button>`
                         : `<button class="toolbar-btn" onclick="deleteStock('${stock.code}', event)" style="margin-right: 5px;">卖出</button><button class="toolbar-btn delete-btn" onclick="realDeleteStock('${stock.code}', event)">删除</button>`
                     }
                 </td>`;
@@ -3234,6 +3289,9 @@
         function openSellPopup(stock) {
             document.getElementById('sellCode').value = stock.code;
             document.getElementById('sellName').value = stock.name;
+            document.getElementById('sellPrice').value = '';
+            document.getElementById('sellEstimatedIncome').textContent = '--';
+            document.getElementById('sellEstimatedIncomePercent').textContent = '--';
 
             // 清空之前的选择
             document.querySelectorAll('input[name="sellReason"]').forEach(input => {
@@ -3245,9 +3303,163 @@
             document.getElementById('sellPopup').classList.add('active');
         }
 
+        // 计算并显示预计收益
+        function updateSellEstimatedIncome() {
+            const sellPriceStr = document.getElementById('sellPrice').value.trim();
+            const code = document.getElementById('sellCode').value;
+            const stock = stocks.find(s => s.code === code);
+
+            if (!sellPriceStr || !stock) {
+                document.getElementById('sellEstimatedIncome').textContent = '--';
+                document.getElementById('sellEstimatedIncomePercent').textContent = '--';
+                return;
+            }
+
+            const sellPrice = parseFloat(sellPriceStr);
+            const cost = parseFloat(stock.cost) || 0;
+            const bonds = parseFloat(stock.bonds) || 0;
+
+            if (cost <= 0) {
+                document.getElementById('sellEstimatedIncome').textContent = '--';
+                document.getElementById('sellEstimatedIncomePercent').textContent = '--';
+                return;
+            }
+
+            const incomePercent = ((sellPrice - cost) / cost * 100);
+            const incomeAmount = bonds * (sellPrice - cost);
+
+            const incomePercentText = incomePercent.toFixed(2) + '%';
+            const incomeAmountText = incomeAmount.toFixed(2);
+
+            document.getElementById('sellEstimatedIncome').textContent = incomeAmountText + ' 元';
+            document.getElementById('sellEstimatedIncomePercent').textContent = incomePercentText;
+
+            // 根据盈亏设置颜色
+            if (incomePercent >= 0) {
+                document.getElementById('sellEstimatedIncomePercent').style.color = '#27ae60';
+            } else {
+                document.getElementById('sellEstimatedIncomePercent').style.color = '#e74c3c';
+            }
+        }
+
         // 关闭卖出弹窗
         function closeSellPopup() {
             document.getElementById('sellPopup').classList.remove('active');
+        }
+
+        // 打开修改卖出价弹窗
+        function openEditSoldPricePopup(stock) {
+            document.getElementById('editSoldPriceCode').value = stock.code;
+            document.getElementById('editSoldPriceName').value = stock.name;
+            document.getElementById('editSoldPriceOldPrice').value = (stock.stats.soldPrice || 0).toFixed(2);
+            document.getElementById('editSoldPriceNewPrice').value = '';
+
+            // 显示原收益
+            const cost = parseFloat(stock.cost) || 0;
+            const oldSoldPrice = stock.stats.soldPrice || 0;
+            const bonds = parseFloat(stock.stats.originalBonds) || parseFloat(stock.bonds) || 0;
+            const oldIncomePercent = cost > 0 ? ((oldSoldPrice - cost) / cost * 100) : 0;
+            const oldIncomeAmount = bonds * (oldSoldPrice - cost);
+
+            document.getElementById('editSoldPriceOldIncome').textContent = oldIncomeAmount.toFixed(2) + ' 元';
+            document.getElementById('editSoldPriceOldIncomePercent').textContent = oldIncomePercent.toFixed(2) + '%';
+            document.getElementById('editSoldPriceNewIncome').textContent = '--';
+            document.getElementById('editSoldPriceNewIncomePercent').textContent = '--';
+
+            document.getElementById('editSoldPricePopup').classList.add('active');
+        }
+
+        // 关闭修改卖出价弹窗
+        function closeEditSoldPricePopup(event) {
+            if (!event || event.target === document.getElementById('editSoldPricePopup')) {
+                document.getElementById('editSoldPricePopup').classList.remove('active');
+            }
+        }
+
+        // 编辑卖出价格
+        function editSoldPrice(code, event) {
+            event.stopPropagation();
+            const stock = stocks.find(s => s.code === code);
+            if (!stock) return;
+            openEditSoldPricePopup(stock);
+        }
+
+        // 更新修改卖出价预览
+        function updateEditSoldPricePreview() {
+            const newPriceStr = document.getElementById('editSoldPriceNewPrice').value.trim();
+            const code = document.getElementById('editSoldPriceCode').value;
+            const stock = stocks.find(s => s.code === code);
+
+            if (!newPriceStr || !stock) {
+                document.getElementById('editSoldPriceNewIncome').textContent = '--';
+                document.getElementById('editSoldPriceNewIncomePercent').textContent = '--';
+                return;
+            }
+
+            const newPrice = parseFloat(newPriceStr);
+            const cost = parseFloat(stock.cost) || 0;
+            const bonds = parseFloat(stock.stats.originalBonds) || parseFloat(stock.bonds) || 0;
+
+            if (cost <= 0) {
+                document.getElementById('editSoldPriceNewIncome').textContent = '--';
+                document.getElementById('editSoldPriceNewIncomePercent').textContent = '--';
+                return;
+            }
+
+            const newIncomePercent = ((newPrice - cost) / cost * 100);
+            const newIncomeAmount = bonds * (newPrice - cost);
+
+            document.getElementById('editSoldPriceNewIncome').textContent = newIncomeAmount.toFixed(2) + ' 元';
+            document.getElementById('editSoldPriceNewIncomePercent').textContent = newIncomePercent.toFixed(2) + '%';
+
+            // 根据盈亏设置颜色
+            const newIncomePercentElement = document.getElementById('editSoldPriceNewIncomePercent');
+            if (newIncomePercent >= 0) {
+                newIncomePercentElement.style.color = '#27ae60';
+            } else {
+                newIncomePercentElement.style.color = '#e74c3c';
+            }
+        }
+
+        // 保存修改的卖出价格
+        function saveSoldPrice() {
+            const code = document.getElementById('editSoldPriceCode').value;
+            const newPriceStr = document.getElementById('editSoldPriceNewPrice').value.trim();
+
+            if (!newPriceStr) {
+                alert('请输入新的卖出价格');
+                return;
+            }
+
+            const newPrice = parseFloat(newPriceStr);
+            if (newPrice <= 0) {
+                alert('卖出价格必须大于0');
+                return;
+            }
+
+            const stock = stocks.find(s => s.code === code);
+            if (!stock) return;
+
+            if (!confirm(`确定要将卖出价格修改为 ${newPrice.toFixed(2)} 吗？`)) {
+                return;
+            }
+
+            const cost = parseFloat(stock.cost) || 0;
+            const bonds = parseFloat(stock.stats.originalBonds) || parseFloat(stock.bonds) || 0;
+
+            // 重新计算收益
+            const newIncomePercent = cost > 0 ? ((newPrice - cost) / cost * 100) : 0;
+            const newIncomeAmount = bonds * (newPrice - cost);
+
+            // 更新卖出价格和收益
+            stock.stats.soldPrice = newPrice;
+            stock.stats.incomePercent = newIncomePercent;
+            stock.stats.incomeAmount = newIncomeAmount;
+
+            saveStocks();
+            renderStocks();
+            closeEditSoldPricePopup();
+            showToast('卖出价格修改成功！');
         }
 
         // 确认卖出
@@ -3256,9 +3468,16 @@
             const stock = stocks.find(s => s.code === code);
             if (!stock) return;
 
+            const sellPriceStr = document.getElementById('sellPrice').value.trim();
             const reason = document.querySelector('input[name="sellReason"]:checked')?.value;
             const note = document.getElementById('sellNote').value.trim();
 
+            if (!sellPriceStr) {
+                alert('请输入卖出价格');
+                return;
+            }
+
+            const sellPrice = parseFloat(sellPriceStr);
             if (!reason) {
                 alert('请选择卖出原因');
                 return;
@@ -3276,12 +3495,11 @@
                 if (holdDays <= 0) holdDays = 1;
             }
 
-            // 计算收益率和收益金额
+            // 计算收益率和收益金额（使用输入的卖出价格）
             const cost = parseFloat(stock.cost) || 0;
-            const soldPrice = parseFloat(stock.now) || 0;
             const originalBonds = parseFloat(stock.bonds) || 0;
-            const incomePercent = cost > 0 ? ((soldPrice - cost) / cost * 100) : 0;
-            const incomeAmount = originalBonds * (soldPrice - cost);
+            const incomePercent = cost > 0 ? ((sellPrice - cost) / cost * 100) : 0;
+            const incomeAmount = originalBonds * (sellPrice - cost);
 
             // 初始化 stats
             if (!stock.stats) {
@@ -3293,7 +3511,8 @@
             stock.stats.soldDate = new Date().toISOString().split('T')[0];
             stock.stats.soldReason = reason;
             stock.stats.soldNote = note;
-            stock.stats.soldPrice = soldPrice;
+            stock.stats.soldPrice = sellPrice;
+            stock.stats.originalBonds = originalBonds; // 保存原始持仓数量，用于后续修改卖出价计算
             stock.stats.holdDays = holdDays;
             stock.stats.incomePercent = incomePercent;
             stock.stats.incomeAmount = incomeAmount;
@@ -3305,6 +3524,7 @@
             renderStocks();
 
             closeSellPopup();
+            showToast(`卖出成功！收益: ${incomePercent.toFixed(2)}%`);
         }
 
         // 真正删除股票（完全从列表移除）
@@ -4045,8 +4265,11 @@
                         stealthMode: stealthMode,
                         sortColumn: sortColumn,
                         sortDirection: sortDirection,
-                        visibleColumns: visibleColumns
-                    }
+                        visibleColumns: visibleColumns,
+                        currentStrategyId: currentStrategyId
+                    },
+                    strategies: tradingStrategies,
+                    disciplineCheckedState: JSON.parse(localStorage.getItem('leeks_discipline_checked_state') || '{}')
                 };
 
                 const gistId = localStorage.getItem(GIST_ID_KEY);
@@ -4212,8 +4435,27 @@
                     localStorage.setItem('leeks_visible_columns', JSON.stringify(visibleColumns));
                 }
 
+                // 恢复策略数据
+                if (backupData.strategies && backupData.strategies.length > 0) {
+                    tradingStrategies = backupData.strategies;
+                    localStorage.setItem('leeks_trading_strategies', JSON.stringify(tradingStrategies));
+                }
+
+                // 恢复当前策略ID
+                if (backupData.settings && backupData.settings.currentStrategyId) {
+                    currentStrategyId = backupData.settings.currentStrategyId;
+                    localStorage.setItem('leeks_current_strategy', currentStrategyId);
+                }
+
+                // 恢复策略检查项的勾选状态
+                if (backupData.disciplineCheckedState) {
+                    localStorage.setItem('leeks_discipline_checked_state', JSON.stringify(backupData.disciplineCheckedState));
+                }
+
                 saveStocks();
                 renderStocks();
+                renderStrategySelect();
+                initDisciplineItems();
                 applyStealthMode();
                 updateAutoRefreshButton();
 
