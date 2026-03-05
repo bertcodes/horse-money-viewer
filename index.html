@@ -1828,6 +1828,22 @@
                     </div>
 
                     <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #34495e; font-weight: 500;">成本价</label>
+                        <input type="text" id="sellCost" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #f5f5f5;">
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <div style="flex: 1;">
+                            <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #34495e; font-weight: 500;">当前持仓</label>
+                            <input type="text" id="sellCurrentBonds" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #f5f5f5;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #34495e; font-weight: 500;">卖出数量</label>
+                            <input type="number" id="sellBonds" placeholder="输入卖出数量" step="1" oninput="updateSellEstimatedIncome()" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
                         <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #34495e; font-weight: 500;">卖出价格</label>
                         <input type="number" id="sellPrice" placeholder="输入卖出价格，如: 1100" step="0.01" oninput="updateSellEstimatedIncome()" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
                     </div>
@@ -1856,6 +1872,9 @@
                     <div style="margin-bottom: 20px; padding: 10px; background: #f0f0f0; border-radius: 5px; font-size: 12px;">
                         <div><strong>预计收益：</strong><span id="sellEstimatedIncome">--</span></div>
                         <div><strong>预计收益率：</strong><span id="sellEstimatedIncomePercent">--</span></div>
+                        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd;">
+                            <strong>卖出后剩余持仓：</strong><span id="sellRemainingBonds">--</span>
+                        </div>
                     </div>
 
                     <div style="display: flex; gap: 10px;">
@@ -1870,7 +1889,7 @@
         <div class="column-settings-popup" id="editSoldPricePopup" onclick="closeEditSoldPricePopup(event)">
             <div class="column-settings-container" onclick="event.stopPropagation()" style="max-width: 400px;">
                 <div class="chart-header">
-                    <span class="chart-title">修改卖出价格</span>
+                    <span class="chart-title">修改卖出信息</span>
                     <button class="close-btn" onclick="closeEditSoldPricePopup()">×</button>
                 </div>
                 <div class="column-settings-content" style="padding: 20px;">
@@ -1885,13 +1904,30 @@
                     </div>
 
                     <div style="margin-bottom: 20px;">
-                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #34495e; font-weight: 500;">原卖出价格</label>
-                        <input type="text" id="editSoldPriceOldPrice" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #f5f5f5;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #34495e; font-weight: 500;">成本价</label>
+                        <input type="text" id="editSoldPriceCost" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #f5f5f5;">
                     </div>
 
-                    <div style="margin-bottom: 20px;">
-                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #34495e; font-weight: 500;">新卖出价格</label>
-                        <input type="number" id="editSoldPriceNewPrice" placeholder="输入新的卖出价格" step="0.01" oninput="updateEditSoldPricePreview()" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <div style="flex: 1;">
+                            <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #34495e; font-weight: 500;">原卖出价格</label>
+                            <input type="text" id="editSoldPriceOldPrice" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #f5f5f5;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #34495e; font-weight: 500;">原卖出数量</label>
+                            <input type="text" id="editSoldPriceOldBonds" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #f5f5f5;">
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <div style="flex: 1;">
+                            <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #34495e; font-weight: 500;">新卖出价格</label>
+                            <input type="number" id="editSoldPriceNewPrice" placeholder="输入卖出价格" step="0.01" oninput="updateEditSoldPricePreview()" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #34495e; font-weight: 500;">新卖出数量</label>
+                            <input type="number" id="editSoldPriceNewBonds" placeholder="输入卖出数量" step="1" oninput="updateEditSoldPricePreview()" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px;">
+                        </div>
                     </div>
 
                     <div style="margin-bottom: 20px; padding: 10px; background: #f0f0f0; border-radius: 5px; font-size: 12px;">
@@ -2314,10 +2350,11 @@
                 if (currentFilter !== 'all') {
                     // 持有中筛选: 有持仓的股票(持仓数量>0且未卖出)
                     if (currentFilter === 'holding') {
-                        // 如果已卖出,即使持仓数量>0也不显示
-                        if (stock.stats && stock.stats.sold) return false;
-                        // 持仓数量必须大于0
-                        if (!stock.bonds || stock.bonds === '--' || parseFloat(stock.bonds) <= 0) return false;
+                        // 持仓数量必须大于0（允许字符串数字）
+                        const bondsNum = stock.bonds && stock.bonds !== '--' ? parseFloat(stock.bonds) : 0;
+                        if (bondsNum <= 0) return false;
+                        // 如果已卖出标记为true且没有剩余持仓，则不显示
+                        if (stock.stats && stock.stats.sold && bondsNum <= 0) return false;
                     }
                     // 盈利和亏损筛选只针对有持仓的股票
                     if (currentFilter === 'profit' || currentFilter === 'loss') {
@@ -2346,6 +2383,17 @@
 
                 return true;
             });
+
+            // 在"持有中"筛选时，固定显示 sh000001 上证指数
+            if (currentFilter === 'holding') {
+                const indexStock = stocks.find(s => s.code === 'sh000001');
+                if (indexStock) {
+                    // 移除已存在的 sh000001
+                    filteredStocks = filteredStocks.filter(s => s.code !== 'sh000001');
+                    // 将 sh000001 添加到数组开头
+                    filteredStocks.unshift(indexStock);
+                }
+            }
 
             if (filteredStocks.length === 0) {
                 tbody.innerHTML = `
@@ -2733,9 +2781,11 @@
                 .filter(col => visibleColumns.includes(col.key))
                 .map(col => cellMap[col.key] || '')
                 .join('') + `<td>
-                    ${stock.stats && stock.stats.sold
+                    ${currentFilter === 'sold' && stock.stats && stock.stats.sold
                         ? `<button class="toolbar-btn" onclick="editSoldPrice('${stock.code}', event)" style="font-size: 11px; padding: 4px 10px; margin-right: 5px;">修改卖价</button><button class="toolbar-btn delete-btn" onclick="realDeleteStock('${stock.code}', event)" style="font-size: 11px; padding: 4px 10px;">移除</button>`
-                        : `<button class="toolbar-btn" onclick="deleteStock('${stock.code}', event)" style="margin-right: 5px;">卖出</button><button class="toolbar-btn delete-btn" onclick="realDeleteStock('${stock.code}', event)">删除</button>`
+                        : (stock.bonds && stock.bonds !== '--' && parseFloat(stock.bonds) > 0
+                            ? `<button class="toolbar-btn" onclick="deleteStock('${stock.code}', event)" style="margin-right: 5px;">卖出</button><button class="toolbar-btn delete-btn" onclick="realDeleteStock('${stock.code}', event)">删除</button>`
+                            : `<button class="toolbar-btn delete-btn" onclick="realDeleteStock('${stock.code}', event)">删除</button>`)
                     }
                 </td>`;
         }
@@ -3528,11 +3578,18 @@
 
         // 打开卖出弹窗
         function openSellPopup(stock) {
+            const currentBonds = parseFloat(stock.bonds) || 0;
+            const cost = stock.cost || 0;
+
             document.getElementById('sellCode').value = stock.code;
             document.getElementById('sellName').value = stock.name;
+            document.getElementById('sellCost').value = cost;
+            document.getElementById('sellCurrentBonds').value = currentBonds;
+            document.getElementById('sellBonds').value = currentBonds; // 默认卖出全部
             document.getElementById('sellPrice').value = '';
             document.getElementById('sellEstimatedIncome').textContent = '--';
             document.getElementById('sellEstimatedIncomePercent').textContent = '--';
+            document.getElementById('sellRemainingBonds').textContent = '0';
 
             // 清空之前的选择
             document.querySelectorAll('input[name="sellReason"]').forEach(input => {
@@ -3547,27 +3604,44 @@
         // 计算并显示预计收益
         function updateSellEstimatedIncome() {
             const sellPriceStr = document.getElementById('sellPrice').value.trim();
+            const sellBondsStr = document.getElementById('sellBonds').value.trim();
+            const currentBondsStr = document.getElementById('sellCurrentBonds').value;
             const code = document.getElementById('sellCode').value;
             const stock = stocks.find(s => s.code === code);
 
-            if (!sellPriceStr || !stock) {
+            if (!sellPriceStr || !sellBondsStr || !stock) {
                 document.getElementById('sellEstimatedIncome').textContent = '--';
                 document.getElementById('sellEstimatedIncomePercent').textContent = '--';
+                document.getElementById('sellRemainingBonds').textContent = '--';
                 return;
             }
 
             const sellPrice = parseFloat(sellPriceStr);
+            const sellBonds = parseFloat(sellBondsStr);
+            const currentBonds = parseFloat(currentBondsStr);
             const cost = parseFloat(stock.cost) || 0;
-            const bonds = parseFloat(stock.bonds) || 0;
 
-            if (cost <= 0) {
+            if (cost <= 0 || sellBonds <= 0) {
                 document.getElementById('sellEstimatedIncome').textContent = '--';
                 document.getElementById('sellEstimatedIncomePercent').textContent = '--';
+                document.getElementById('sellRemainingBonds').textContent = '--';
                 return;
             }
 
+            // 检查卖出数量不能超过当前持仓
+            if (sellBonds > currentBonds) {
+                document.getElementById('sellEstimatedIncome').textContent = '数量超出';
+                document.getElementById('sellEstimatedIncomePercent').textContent = '--';
+                document.getElementById('sellRemainingBonds').textContent = '--';
+                return;
+            }
+
+            // 计算卖出后剩余持仓
+            const remainingBonds = currentBonds - sellBonds;
+            document.getElementById('sellRemainingBonds').textContent = remainingBonds + ' 股';
+
             const incomePercent = ((sellPrice - cost) / cost * 100);
-            const incomeAmount = bonds * (sellPrice - cost);
+            const incomeAmount = sellBonds * (sellPrice - cost);
 
             const incomePercentText = incomePercent.toFixed(2) + '%';
             const incomeAmountText = incomeAmount.toFixed(2);
@@ -3592,20 +3666,35 @@
         function openEditSoldPricePopup(stock) {
             document.getElementById('editSoldPriceCode').value = stock.code;
             document.getElementById('editSoldPriceName').value = stock.name;
-            document.getElementById('editSoldPriceOldPrice').value = (stock.stats.soldPrice || 0).toFixed(2);
-            document.getElementById('editSoldPriceNewPrice').value = '';
+            document.getElementById('editSoldPriceCost').value = (parseFloat(stock.cost) || 0).toFixed(2);
+            document.getElementById('editSoldPriceOldPrice').value = (parseFloat(stock.stats.soldPrice) || 0).toFixed(2);
+            
+            // 兼容处理：优先使用soldBonds，如果没有则使用originalBonds，最后尝试从incomeAmount反推
+            let soldBonds = stock.stats.soldBonds || stock.stats.originalBonds || 0;
+            if (soldBonds === 0 && stock.stats.incomeAmount && stock.stats.soldPrice) {
+                const cost = parseFloat(stock.cost) || 0;
+                const soldPrice = parseFloat(stock.stats.soldPrice) || 0;
+                if (cost > 0 && soldPrice > 0) {
+                    soldBonds = stock.stats.incomeAmount / (soldPrice - cost);
+                }
+            }
+            
+            document.getElementById('editSoldPriceOldBonds').value = soldBonds;
+            document.getElementById('editSoldPriceNewPrice').value = (parseFloat(stock.stats.soldPrice) || 0).toFixed(2);
+            document.getElementById('editSoldPriceNewBonds').value = soldBonds;
 
             // 显示原收益
             const cost = parseFloat(stock.cost) || 0;
             const oldSoldPrice = stock.stats.soldPrice || 0;
-            const bonds = parseFloat(stock.stats.originalBonds) || parseFloat(stock.bonds) || 0;
+            const oldSoldBonds = stock.stats.soldBonds || stock.stats.originalBonds || 0;
             const oldIncomePercent = cost > 0 ? ((oldSoldPrice - cost) / cost * 100) : 0;
-            const oldIncomeAmount = bonds * (oldSoldPrice - cost);
+            const oldIncomeAmount = oldSoldBonds * (oldSoldPrice - cost);
 
             document.getElementById('editSoldPriceOldIncome').textContent = oldIncomeAmount.toFixed(2) + ' 元';
             document.getElementById('editSoldPriceOldIncomePercent').textContent = oldIncomePercent.toFixed(2) + '%';
-            document.getElementById('editSoldPriceNewIncome').textContent = '--';
-            document.getElementById('editSoldPriceNewIncomePercent').textContent = '--';
+
+            // 计算并显示新收益（默认填充原值）
+            updateEditSoldPricePreview();
 
             document.getElementById('editSoldPricePopup').classList.add('active');
         }
@@ -3628,27 +3717,28 @@
         // 更新修改卖出价预览
         function updateEditSoldPricePreview() {
             const newPriceStr = document.getElementById('editSoldPriceNewPrice').value.trim();
+            const newBondsStr = document.getElementById('editSoldPriceNewBonds').value.trim();
             const code = document.getElementById('editSoldPriceCode').value;
             const stock = stocks.find(s => s.code === code);
 
-            if (!newPriceStr || !stock) {
+            if (!newPriceStr || !newBondsStr || !stock) {
                 document.getElementById('editSoldPriceNewIncome').textContent = '--';
                 document.getElementById('editSoldPriceNewIncomePercent').textContent = '--';
                 return;
             }
 
             const newPrice = parseFloat(newPriceStr);
+            const newBonds = parseFloat(newBondsStr);
             const cost = parseFloat(stock.cost) || 0;
-            const bonds = parseFloat(stock.stats.originalBonds) || parseFloat(stock.bonds) || 0;
 
-            if (cost <= 0) {
+            if (cost <= 0 || newBonds <= 0) {
                 document.getElementById('editSoldPriceNewIncome').textContent = '--';
                 document.getElementById('editSoldPriceNewIncomePercent').textContent = '--';
                 return;
             }
 
             const newIncomePercent = ((newPrice - cost) / cost * 100);
-            const newIncomeAmount = bonds * (newPrice - cost);
+            const newIncomeAmount = newBonds * (newPrice - cost);
 
             document.getElementById('editSoldPriceNewIncome').textContent = newIncomeAmount.toFixed(2) + ' 元';
             document.getElementById('editSoldPriceNewIncomePercent').textContent = newIncomePercent.toFixed(2) + '%';
@@ -3666,41 +3756,71 @@
         function saveSoldPrice() {
             const code = document.getElementById('editSoldPriceCode').value;
             const newPriceStr = document.getElementById('editSoldPriceNewPrice').value.trim();
+            const newBondsStr = document.getElementById('editSoldPriceNewBonds').value.trim();
 
             if (!newPriceStr) {
-                alert('请输入新的卖出价格');
+                alert('请输入卖出价格');
+                return;
+            }
+
+            if (!newBondsStr) {
+                alert('请输入卖出数量');
                 return;
             }
 
             const newPrice = parseFloat(newPriceStr);
+            const newBonds = parseFloat(newBondsStr);
+
             if (newPrice <= 0) {
                 alert('卖出价格必须大于0');
+                return;
+            }
+
+            if (newBonds <= 0) {
+                alert('卖出数量必须大于0');
                 return;
             }
 
             const stock = stocks.find(s => s.code === code);
             if (!stock) return;
 
-            if (!confirm(`确定要将卖出价格修改为 ${newPrice.toFixed(2)} 吗？`)) {
+            const cost = parseFloat(stock.cost) || 0;
+            // 对于已卖出的股票，使用soldBonds作为参考；如果不存在则不限制数量
+            let maxBonds = stock.stats.soldBonds || stock.stats.originalBonds || 0;
+            
+            // 只有当存在有效参考值时才进行验证
+            if (maxBonds > 0 && newBonds > maxBonds) {
+                alert(`卖出数量不能超过原始卖出数量 ${maxBonds}`);
                 return;
             }
 
-            const cost = parseFloat(stock.cost) || 0;
-            const bonds = parseFloat(stock.stats.originalBonds) || parseFloat(stock.bonds) || 0;
-
             // 重新计算收益
             const newIncomePercent = cost > 0 ? ((newPrice - cost) / cost * 100) : 0;
-            const newIncomeAmount = bonds * (newPrice - cost);
+            const newIncomeAmount = newBonds * (newPrice - cost);
 
-            // 更新卖出价格和收益
+            // 更新卖出信息
             stock.stats.soldPrice = newPrice;
+            stock.stats.soldBonds = newBonds;
             stock.stats.incomePercent = newIncomePercent;
             stock.stats.incomeAmount = newIncomeAmount;
+
+            // 如果是部分卖出（卖出数量小于原始持仓），需要更新持仓数量
+            const originalBonds = stock.stats.originalBonds || 0;
+            if (originalBonds > 0 && newBonds < originalBonds) {
+                // 部分卖出，更新剩余持仓数量
+                stock.bonds = (originalBonds - newBonds).toString();
+                // 取消已卖出标记，因为还有剩余持仓
+                stock.stats.sold = false;
+            } else if (newBonds >= originalBonds) {
+                // 全部卖出，持仓清零
+                stock.bonds = '0';
+                stock.stats.sold = true;
+            }
 
             saveStocks();
             renderStocks();
             closeEditSoldPricePopup();
-            showToast('卖出价格修改成功！');
+            showToast('卖出信息修改成功！');
         }
 
         // 确认卖出
@@ -3710,6 +3830,8 @@
             if (!stock) return;
 
             const sellPriceStr = document.getElementById('sellPrice').value.trim();
+            const sellBondsStr = document.getElementById('sellBonds').value.trim();
+            const currentBondsStr = document.getElementById('sellCurrentBonds').value;
             const reason = document.querySelector('input[name="sellReason"]:checked')?.value;
             const note = document.getElementById('sellNote').value.trim();
 
@@ -3718,7 +3840,25 @@
                 return;
             }
 
+            if (!sellBondsStr) {
+                alert('请输入卖出数量');
+                return;
+            }
+
             const sellPrice = parseFloat(sellPriceStr);
+            const sellBonds = parseFloat(sellBondsStr);
+            const currentBonds = parseFloat(currentBondsStr);
+
+            if (sellBonds <= 0) {
+                alert('卖出数量必须大于0');
+                return;
+            }
+
+            if (sellBonds > currentBonds) {
+                alert(`卖出数量不能超过当前持仓数量 ${currentBonds}`);
+                return;
+            }
+
             if (!reason) {
                 alert('请选择卖出原因');
                 return;
@@ -3740,32 +3880,60 @@
             const cost = parseFloat(stock.cost) || 0;
             const originalBonds = parseFloat(stock.bonds) || 0;
             const incomePercent = cost > 0 ? ((sellPrice - cost) / cost * 100) : 0;
-            const incomeAmount = originalBonds * (sellPrice - cost);
+            const incomeAmount = sellBonds * (sellPrice - cost);
 
             // 初始化 stats
             if (!stock.stats) {
                 stock.stats = {};
             }
 
-            // 记录卖出信息
-            stock.stats.sold = true;
-            stock.stats.soldDate = new Date().toISOString().split('T')[0];
-            stock.stats.soldReason = reason;
-            stock.stats.soldNote = note;
-            stock.stats.soldPrice = sellPrice;
-            stock.stats.originalBonds = originalBonds; // 保存原始持仓数量，用于后续修改卖出价计算
-            stock.stats.holdDays = holdDays;
-            stock.stats.incomePercent = incomePercent;
-            stock.stats.incomeAmount = incomeAmount;
+            // 如果是全部卖出
+            if (sellBonds >= currentBonds) {
+                // 记录卖出信息（全部卖出）
+                stock.stats.sold = true;
+                stock.stats.soldDate = new Date().toISOString().split('T')[0];
+                stock.stats.soldReason = reason;
+                stock.stats.soldNote = note;
+                stock.stats.soldPrice = sellPrice;
+                stock.stats.soldBonds = sellBonds; // 保存实际卖出数量
+                stock.stats.originalBonds = originalBonds; // 保存原始持仓数量，用于后续修改卖出价计算
+                stock.stats.holdDays = holdDays;
+                stock.stats.incomePercent = incomePercent;
+                stock.stats.incomeAmount = incomeAmount;
 
-            // 保留股票在列表中，但标记为已卖出
-            stock.bonds = '0'; // 持仓清零
+                // 保留股票在列表中，但标记为已卖出
+                stock.bonds = '0'; // 持仓清零
+            } else {
+                // 部分卖出，记录部分卖出历史
+                if (!stock.stats.sellHistory) {
+                    stock.stats.sellHistory = [];
+                }
+
+                stock.stats.sellHistory.push({
+                    date: new Date().toISOString().split('T')[0],
+                    price: sellPrice,
+                    bonds: sellBonds,
+                    reason: reason,
+                    note: note,
+                    incomePercent: incomePercent,
+                    incomeAmount: incomeAmount,
+                    holdDays: holdDays
+                });
+
+                // 更新当前持仓
+                stock.bonds = (currentBonds - sellBonds).toString();
+            }
 
             saveStocks();
             renderStocks();
 
             closeSellPopup();
-            showToast(`卖出成功！收益: ${incomePercent.toFixed(2)}%`);
+            const remainingBonds = currentBonds - sellBonds;
+            if (remainingBonds > 0) {
+                showToast(`卖出成功！收益: ${incomePercent.toFixed(2)}%，剩余持仓: ${remainingBonds} 股`);
+            } else {
+                showToast(`卖出成功！收益: ${incomePercent.toFixed(2)}%`);
+            }
         }
 
         // 真正删除股票（完全从列表移除）
@@ -3888,12 +4056,19 @@
                         const cost = parseFloat(stock.cost);
                         const now = parseFloat(stock.now);
                         if (!isNaN(now)) {
-                            const income = (now - cost);
-                            stock.incomePercent = ((income / cost) * 100).toFixed(2);
+                            // 如果已卖出，使用已保存的收益数据
+                            if (stock.stats && stock.stats.sold) {
+                                stock.incomePercent = stock.stats.incomePercent !== undefined ? stock.stats.incomePercent.toFixed(2) : '0.00';
+                                stock.income = stock.stats.incomeAmount !== undefined ? stock.stats.incomeAmount.toFixed(2) : '0.00';
+                            } else {
+                                // 未卖出的股票，计算当前收益
+                                const income = (now - cost);
+                                stock.incomePercent = ((income / cost) * 100).toFixed(2);
 
-                            if (stock.bonds && stock.bonds !== '--') {
-                                const bonds = parseFloat(stock.bonds);
-                                stock.income = (income * bonds).toFixed(2);
+                                if (stock.bonds && stock.bonds !== '--') {
+                                    const bonds = parseFloat(stock.bonds);
+                                    stock.income = (income * bonds).toFixed(2);
+                                }
                             }
                         }
                     }
@@ -4183,14 +4358,21 @@
                 const costValue = parseFloat(cost);
                 const now = parseFloat(stock.now);
                 if (!isNaN(now)) {
-                    const income = (now - costValue);
-                    stock.incomePercent = ((income / costValue) * 100).toFixed(2);
-
-                    if (bonds && bonds !== '--') {
-                        const bondsValue = parseFloat(bonds);
-                        stock.income = (income * bondsValue).toFixed(2);
+                    // 如果已卖出，使用已保存的收益数据
+                    if (stock.stats && stock.stats.sold) {
+                        stock.incomePercent = stock.stats.incomePercent !== undefined ? stock.stats.incomePercent.toFixed(2) : '0.00';
+                        stock.income = stock.stats.incomeAmount !== undefined ? stock.stats.incomeAmount.toFixed(2) : '0.00';
                     } else {
-                        stock.income = '--';
+                        // 未卖出的股票，计算当前收益
+                        const income = (now - costValue);
+                        stock.incomePercent = ((income / costValue) * 100).toFixed(2);
+
+                        if (bonds && bonds !== '--') {
+                            const bondsValue = parseFloat(bonds);
+                            stock.income = (income * bondsValue).toFixed(2);
+                        } else {
+                            stock.income = '--';
+                        }
                     }
                 }
             } else {
