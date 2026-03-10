@@ -2370,7 +2370,11 @@
                         if (!now || !targetPrice || now < targetPrice) return false;
                     }
                     if (currentFilter === 'sold') {
-                        if (!stock.stats || !stock.stats.sold) return false;
+                        // 显示有卖出记录的股票(包括全部卖出和部分卖出)
+                        if (!stock.stats) return false;
+                        const hasSold = stock.stats.sold === true;
+                        const hasSellHistory = stock.stats.sellHistory && stock.stats.sellHistory.length > 0;
+                        if (!hasSold && !hasSellHistory) return false;
                     }
                 }
 
@@ -2586,6 +2590,16 @@
                     statusTooltip = `卖出价: ${soldPrice.toFixed(2)}\n收益率: ${incomePercent >= 0 ? '+' : ''}${incomePercent.toFixed(2)}%\n收益: ${incomeAmount >= 0 ? '+' : ''}${incomeAmount.toFixed(2)}\n持股天数: ${holdDays}天`;
                 }
             } else {
+                // 检查是否有部分卖出记录
+                if (stock.stats && stock.stats.sellHistory && stock.stats.sellHistory.length > 0) {
+                    const sellCount = stock.stats.sellHistory.length;
+                    // 计算部分卖出的累计收益
+                    const totalSellIncome = stock.stats.sellHistory.reduce((sum, record) => sum + (record.incomeAmount || 0), 0);
+                    statusText = `📝 部分卖出 ${sellCount}次`;
+                    statusTooltip = `部分卖出次数: ${sellCount}\n累计收益: ${totalSellIncome >= 0 ? '+' : ''}${totalSellIncome.toFixed(2)}`;
+                    priceStatus = 'neutral';
+                }
+
                 // 未卖出时的状态判断
                 if (!isNaN(now) && !isNaN(targetPrice) && targetPrice > 0) {
                     if (now >= targetPrice) {
@@ -2748,6 +2762,33 @@
                 }
             }
 
+            // 计算累计卖出收益(针对已卖出或部分卖出的股票)
+            let totalSoldIncome = 0;
+            let totalSoldIncomePercent = 0;
+            let totalSoldBonds = 0;
+            if (stock.stats) {
+                const cost = parseFloat(stock.cost) || 0;
+                // 统计部分卖出历史记录
+                if (stock.stats.sellHistory && stock.stats.sellHistory.length > 0) {
+                    stock.stats.sellHistory.forEach(record => {
+                        totalSoldIncome += record.incomeAmount || 0;
+                        totalSoldBonds += record.bonds || 0;
+                    });
+                }
+                // 统计最后一次全部卖出
+                if (stock.stats.sold) {
+                    totalSoldIncome += stock.stats.incomeAmount || 0;
+                    totalSoldBonds += stock.stats.soldBonds || 0;
+                }
+            }
+            // 计算综合收益率: 总收益 / (总卖出数量 × 成本价)
+            if (totalSoldBonds > 0 && stock.cost && stock.cost !== '--') {
+                const cost = parseFloat(stock.cost);
+                if (cost > 0) {
+                    totalSoldIncomePercent = (totalSoldIncome / (totalSoldBonds * cost)) * 100;
+                }
+            }
+
             // 单元格映射
             const cellMap = {
                 code: `<td>${stock.code}</td>`,
@@ -2764,8 +2805,8 @@
                 bonds: `<td class="editable" onclick="event.stopPropagation(); openEditPopup('${stock.code}')">${stock.bonds || '--'}</td>`,
                 marketValue: `<td class="price-tooltip" data-tooltip="当前价 × 持仓数量">${marketValue}</td>`,
                 prediction: `<td class="gray price-tooltip" data-tooltip="${predictionRule || '数据不足，无法预测'}">${formatPredictionForStealthMode(prediction, predictionClass)}</td>`,
-                incomePercent: `<td class="${stock.incomePercent >= 0 ? 'red' : stock.incomePercent < 0 ? 'green' : 'gray'}">${formatChangePercent(stock.incomePercent)}</td>`,
-                income: `<td class="${stock.income >= 0 ? 'red' : stock.income < 0 ? 'green' : 'gray'}">${formatIncome(stock.income)}</td>`,
+                incomePercent: `<td class="${(totalSoldBonds > 0 ? totalSoldIncomePercent : stock.incomePercent) >= 0 ? 'red' : (totalSoldBonds > 0 ? totalSoldIncomePercent : stock.incomePercent) < 0 ? 'green' : 'gray'}">${formatChangePercent(totalSoldBonds > 0 ? totalSoldIncomePercent : stock.incomePercent)}</td>`,
+                income: `<td class="${(totalSoldBonds > 0 ? totalSoldIncome : stock.income) >= 0 ? 'red' : (totalSoldBonds > 0 ? totalSoldIncome : stock.income) < 0 ? 'green' : 'gray'}">${formatIncome(totalSoldBonds > 0 ? totalSoldIncome : stock.income)}</td>`,
                 targetPrice: `<td class="editable price-tooltip" onclick="event.stopPropagation(); openEditPopup('${stock.code}')"
                     data-tooltip="距离当前价: ${targetPercent !== '--' ? (targetPercent > 0 ? '+' : '') + targetPercent + '%' : '--'}">${stock.targetPrice || '--'}</td>`,
                 stopLoss: `<td class="editable price-tooltip" onclick="event.stopPropagation(); openEditPopup('${stock.code}')"
@@ -2849,8 +2890,9 @@
 
         // 格式化涨跌幅
         function formatChangePercent(value) {
-            if (!value) return '--';
+            if (value === null || value === undefined || value === '--') return '--';
             value = parseFloat(value);
+            if (isNaN(value)) return '--';
             return value >= 0 ? `+${value.toFixed(2)}%` : `${value.toFixed(2)}%`;
         }
 
@@ -3060,30 +3102,50 @@
             let totalIncome = 0;
             let profitCount = 0;
             let lossCount = 0;
+            let tradeCount = 0;
 
             soldStocks.forEach(stock => {
                 if (stock.stats) {
-                    totalHoldDays += stock.stats.holdDays || 0;
-                    totalIncomePercent += stock.stats.incomePercent || 0;
-                    totalIncome += stock.stats.incomeAmount || 0;
+                    // 先统计部分卖出历史记录
+                    if (stock.stats.sellHistory && stock.stats.sellHistory.length > 0) {
+                        stock.stats.sellHistory.forEach(record => {
+                            tradeCount++;
+                            totalHoldDays += record.holdDays || 0;
+                            totalIncomePercent += record.incomePercent || 0;
+                            totalIncome += record.incomeAmount || 0;
 
-                    if (stock.stats.incomePercent > 0) {
-                        profitCount++;
-                    } else if (stock.stats.incomePercent < 0) {
-                        lossCount++;
+                            if (record.incomePercent > 0) {
+                                profitCount++;
+                            } else if (record.incomePercent < 0) {
+                                lossCount++;
+                            }
+                        });
+                    }
+
+                    // 如果已全部卖出,再统计最后一次全部卖出
+                    if (stock.stats.sold) {
+                        tradeCount++;
+                        totalHoldDays += stock.stats.holdDays || 0;
+                        totalIncomePercent += stock.stats.incomePercent || 0;
+                        totalIncome += stock.stats.incomeAmount || 0;
+
+                        if (stock.stats.incomePercent > 0) {
+                            profitCount++;
+                        } else if (stock.stats.incomePercent < 0) {
+                            lossCount++;
+                        }
                     }
                 }
             });
 
-            const count = soldStocks.length;
             return {
-                count: count,
-                avgHoldDays: count > 0 ? Math.round(totalHoldDays / count) : 0,
-                avgIncomePercent: count > 0 ? totalIncomePercent / count : 0,
+                count: tradeCount,
+                avgHoldDays: tradeCount > 0 ? Math.round(totalHoldDays / tradeCount) : 0,
+                avgIncomePercent: tradeCount > 0 ? totalIncomePercent / tradeCount : 0,
                 totalIncome: totalIncome,
                 profitCount: profitCount,
                 lossCount: lossCount,
-                winRate: count > 0 ? (profitCount / count * 100) : 0
+                winRate: tradeCount > 0 ? (profitCount / tradeCount * 100) : 0
             };
         }
 
