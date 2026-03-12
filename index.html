@@ -1516,6 +1516,13 @@
                     <option value="target">已达目标</option>
                     <option value="sold">卖出记录</option>
                 </select>
+                <select id="soldReasonFilter" onchange="filterBySoldReason(this.value)"
+                        style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 13px; cursor: pointer; display: none;">
+                    <option value="all">全部原因</option>
+                    <option value="target">✅ 达标</option>
+                    <option value="stoploss">🛡️ 止损</option>
+                    <option value="other">📝 其他</option>
+                </select>
             </div>
         </div>
 
@@ -1699,6 +1706,41 @@
                     <button class="toolbar-btn" onclick="selectAllColumns()">全选</button>
                     <button class="toolbar-btn" onclick="deselectAllColumns()">全不选</button>
                     <button class="toolbar-btn active" onclick="saveColumnSettings()">确定</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 卖出记录详情弹窗 -->
+        <div class="column-settings-popup" id="soldDetailPopup" onclick="closeSoldDetailPopup(event)">
+            <div class="column-settings-container" onclick="event.stopPropagation()" style="max-width: 600px;">
+                <div class="chart-header">
+                    <span class="chart-title" id="soldDetailTitle">交易详情</span>
+                    <button class="close-btn" onclick="closeSoldDetailPopup()">×</button>
+                </div>
+                <div class="column-settings-content" style="padding: 20px; max-height: 70vh; overflow-y: auto;">
+                    <!-- 交易概览 -->
+                    <div id="soldDetailOverview" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+                        <!-- 动态生成 -->
+                    </div>
+
+                    <!-- 交易历史 -->
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 10px; color: #2c3e50;">📜 交易历史</h4>
+                        <div id="soldDetailHistory">
+                            <!-- 动态生成 -->
+                        </div>
+                    </div>
+
+                    <!-- 收益分布 -->
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 10px; color: #2c3e50;">📊 收益分布</h4>
+                        <div id="soldDetailDistribution" style="padding: 15px; background: #f8f9fa; border-radius: 5px;">
+                            <!-- 动态生成 -->
+                        </div>
+                    </div>
+                </div>
+                <div style="padding: 15px 20px; border-top: 1px solid #eee; text-align: right;">
+                    <button class="toolbar-btn active" onclick="closeSoldDetailPopup()" style="display: inline-block; padding: 8px 25px;">关闭</button>
                 </div>
             </div>
         </div>
@@ -2035,6 +2077,7 @@
         let currentChartStock = null;
         let currentFilter = 'all';
         let searchText = '';
+        let currentSoldReasonFilter = 'all';
 
         // 投资名言
         const investmentQuotes = [
@@ -2235,6 +2278,7 @@
             { key: 'targetPrice', name: '目标价', default: true },
             { key: 'stopLoss', name: '止损价', default: true },
             { key: 'status', name: '状态', default: true },
+            { key: 'soldReason', name: '卖出原因', default: true },
             { key: 'yieldToTarget', name: '目标收益', default: true },
             { key: 'yieldToStop', name: '止损损失', default: true },
             { key: 'riskRewardRatio', name: '盈亏比', default: true },
@@ -2375,6 +2419,22 @@
                         const hasSold = stock.stats.sold === true;
                         const hasSellHistory = stock.stats.sellHistory && stock.stats.sellHistory.length > 0;
                         if (!hasSold && !hasSellHistory) return false;
+
+                        // 按卖出原因筛选
+                        if (currentSoldReasonFilter !== 'all') {
+                            const reasonMatch = (record) => record.reason === currentSoldReasonFilter;
+
+                            // 检查全部卖出是否匹配
+                            if (hasSold && stock.stats.soldReason) {
+                                if (!reasonMatch({reason: stock.stats.soldReason})) return false;
+                            }
+
+                            // 检查部分卖出历史是否有匹配的
+                            if (hasSellHistory) {
+                                const hasMatchingReason = stock.stats.sellHistory.some(reasonMatch);
+                                if (!hasMatchingReason) return false;
+                            }
+                        }
                     }
                 }
 
@@ -2449,7 +2509,11 @@
 
             // 生成表格行
             const rowsHtml = filteredStocks.map(stock => {
-                return `<tr data-code="${stock.code}" ondblclick="showChart('${stock.code}', 'min')" oncontextmenu="showContextMenu(event, '${stock.code}')">${renderTableCells(stock)}</tr>`;
+                const hasSoldRecord = (stock.stats && stock.stats.sold) || (stock.stats && stock.stats.sellHistory && stock.stats.sellHistory.length > 0);
+                const clickHandler = currentFilter === 'sold' && hasSoldRecord
+                    ? `onclick="openSoldDetail('${stock.code}', event)"`
+                    : '';
+                return `<tr data-code="${stock.code}" ${clickHandler} ondblclick="showChart('${stock.code}', 'min')" oncontextmenu="showContextMenu(event, '${stock.code}')">${renderTableCells(stock)}</tr>`;
             }).join('');
 
             // 卖出记录汇总统计
@@ -2784,9 +2848,17 @@
             // 计算综合收益率: 总收益 / (总卖出数量 × 成本价)
             if (totalSoldBonds > 0 && stock.cost && stock.cost !== '--') {
                 const cost = parseFloat(stock.cost);
-                if (cost > 0) {
+                if (cost > 0 && !isNaN(cost)) {
                     totalSoldIncomePercent = (totalSoldIncome / (totalSoldBonds * cost)) * 100;
                 }
+            }
+            // 如果计算结果为0但有卖出记录（可能是成本价缺失或数据不完整），尝试使用保存的收益率
+            if (totalSoldBonds > 0 && totalSoldIncomePercent === 0 && totalSoldIncome === 0 && stock.stats && stock.stats.sold && stock.stats.incomePercent) {
+                totalSoldIncomePercent = stock.stats.incomePercent;
+            }
+            // 如果有收益但没有收益率（因为成本价缺失），使用保存的收益率
+            if (totalSoldBonds > 0 && totalSoldIncome !== 0 && totalSoldIncomePercent === 0 && stock.stats && stock.stats.sold && stock.stats.incomePercent) {
+                totalSoldIncomePercent = stock.stats.incomePercent;
             }
 
             // 单元格映射
@@ -2812,6 +2884,7 @@
                 stopLoss: `<td class="editable price-tooltip" onclick="event.stopPropagation(); openEditPopup('${stock.code}')"
                     data-tooltip="距离当前价: ${stopLossPercent !== '--' ? (stopLossPercent > 0 ? '+' : '') + stopLossPercent + '%' : '--'}">${stock.stopLoss || '--'}</td>`,
                 status: `<td><span class="price-status ${priceStatus} ${statusTooltip ? 'price-tooltip' : ''}" ${statusTooltip ? `data-tooltip="${statusTooltip}"` : ''}>${statusText}</span></td>`,
+                soldReason: `<td>${formatSoldReason(stock)}</td>`,
                 yieldToTarget: `<td class="${yieldToTarget >= 0 ? 'red' : yieldToTarget < 0 ? 'green' : 'gray'}">${formatChangePercent(yieldToTarget)}</td>`,
                 yieldToStop: `<td class="${yieldToStop >= 0 ? 'red' : yieldToStop < 0 ? 'green' : 'gray'}">${formatChangePercent(yieldToStop)}</td>`,
                 riskRewardRatio: `<td class="price-tooltip" data-tooltip="${riskRewardRatio !== '--' ? '收益潜力是风险的 ' + riskRewardRatio.split(':')[0] + ' 倍' : '--'}">${riskRewardRatio}</td>`,
@@ -2878,6 +2951,21 @@
         // 状态过滤
         function filterByStatus(status) {
             currentFilter = status;
+
+            // 控制卖出原因筛选的显示
+            const soldReasonFilter = document.getElementById('soldReasonFilter');
+            if (status === 'sold') {
+                soldReasonFilter.style.display = 'inline-block';
+            } else {
+                soldReasonFilter.style.display = 'none';
+                currentSoldReasonFilter = 'all';
+            }
+
+            renderStocks();
+        }
+
+        function filterBySoldReason(reason) {
+            currentSoldReasonFilter = reason;
             renderStocks();
         }
 
@@ -2904,9 +2992,69 @@
 
         // 格式化收益
         function formatIncome(value) {
-            if (!value) return '--';
+            if (value === undefined || value === null || value === '' || isNaN(parseFloat(value))) return '--';
             value = parseFloat(value);
             return value >= 0 ? `+${value.toFixed(2)}` : value.toFixed(2);
+        }
+
+        // 格式化卖出原因
+        function formatSoldReason(stock) {
+            if (!stock.stats) return '--';
+
+            // 已全部卖出
+            if (stock.stats.sold) {
+                const reasonMap = {
+                    'target': '✅ 达标',
+                    'stoploss': '🛡️ 止损',
+                    'other': '📝 其他'
+                };
+                const reason = stock.stats.soldReason || '';
+                let text = reasonMap[reason] || (reason ? reason : '');
+                // 如果有备注，显示备注
+                if (stock.stats.soldNote && stock.stats.soldNote.trim()) {
+                    if (text) {
+                        text += ` (${stock.stats.soldNote.trim()})`;
+                    } else {
+                        text = stock.stats.soldNote.trim();
+                    }
+                }
+                return text || '--';
+            }
+
+            // 有部分卖出历史
+            if (stock.stats.sellHistory && stock.stats.sellHistory.length > 0) {
+                // 统计各卖出原因的详细信息
+                const reasonInfo = {};
+                stock.stats.sellHistory.forEach(record => {
+                    const reasonMap = {
+                        'target': '✅ 达标',
+                        'stoploss': '🛡️ 止损',
+                        'other': '📝 其他'
+                    };
+                    const reasonText = reasonMap[record.reason] || (record.reason || '');
+                    // 构建显示文本（包含备注）
+                    let displayText = reasonText;
+                    if (record.note && record.note.trim()) {
+                        if (displayText) {
+                            displayText += ` (${record.note.trim()})`;
+                        } else {
+                            displayText = record.note.trim();
+                        }
+                    }
+                    if (!reasonInfo[displayText]) {
+                        reasonInfo[displayText] = { count: 0, reason: reasonText };
+                    }
+                    reasonInfo[displayText].count++;
+                });
+
+                // 生成显示文本
+                const reasonTexts = Object.entries(reasonInfo)
+                    .map(([displayText, info]) => info.count > 1 ? `${displayText}×${info.count}` : displayText)
+                    .join(', ');
+                return reasonTexts || '--';
+            }
+
+            return '--';
         }
 
         // 格式化持股天数
@@ -3963,6 +4111,9 @@
                 stock.stats.holdDays = holdDays;
                 stock.stats.incomePercent = incomePercent;
                 stock.stats.incomeAmount = incomeAmount;
+                // 保存卖出时的策略和确认项
+                stock.stats.soldStrategyId = stock.strategy || '';
+                stock.stats.soldConfirmItems = disciplineItems.filter(item => item.checked).map(item => ({id: item.id, text: item.text}));
 
                 // 保留股票在列表中，但标记为已卖出
                 stock.bonds = '0'; // 持仓清零
@@ -3980,7 +4131,9 @@
                     note: note,
                     incomePercent: incomePercent,
                     incomeAmount: incomeAmount,
-                    holdDays: holdDays
+                    holdDays: holdDays,
+                    strategyId: stock.strategy || '',
+                    confirmItems: disciplineItems.filter(item => item.checked).map(item => ({id: item.id, text: item.text}))
                 });
 
                 // 更新当前持仓
@@ -4361,6 +4514,169 @@
             if (!event || event.target === document.getElementById('editPopup')) {
                 document.getElementById('editPopup').classList.remove('active');
                 editingStockCode = null;
+            }
+        }
+
+        // 打开卖出记录详情
+        function openSoldDetail(code, event) {
+            if (event) event.stopPropagation();
+            const stock = stocks.find(s => s.code === code);
+            if (!stock) return;
+
+            const popup = document.getElementById('soldDetailPopup');
+            const title = document.getElementById('soldDetailTitle');
+            const overview = document.getElementById('soldDetailOverview');
+            const history = document.getElementById('soldDetailHistory');
+            const distribution = document.getElementById('soldDetailDistribution');
+
+            // 设置标题
+            title.textContent = `📊 ${stock.code} ${stock.name} - 交易详情`;
+
+            // 计算交易概览
+            let totalIncome = 0;
+            let totalSoldBonds = 0;
+            let totalHoldDays = 0;
+            let tradeCount = 0;
+            let sellRecords = [];
+
+            // 收集部分卖出记录
+            if (stock.stats && stock.stats.sellHistory && stock.stats.sellHistory.length > 0) {
+                stock.stats.sellHistory.forEach((record, index) => {
+                    sellRecords.push({
+                        ...record,
+                        type: '部分',
+                        order: index + 1
+                    });
+                    totalIncome += record.incomeAmount || 0;
+                    totalSoldBonds += record.bonds || 0;
+                    totalHoldDays += record.holdDays || 0;
+                    tradeCount++;
+                });
+            }
+
+            // 收集全部卖出记录
+            if (stock.stats && stock.stats.sold) {
+                sellRecords.push({
+                    date: stock.stats.soldDate,
+                    price: stock.stats.soldPrice,
+                    bonds: stock.stats.soldBonds,
+                    reason: stock.stats.soldReason,
+                    note: stock.stats.soldNote,
+                    incomePercent: stock.stats.incomePercent,
+                    incomeAmount: stock.stats.incomeAmount,
+                    holdDays: stock.stats.holdDays,
+                    type: '全部',
+                    order: tradeCount + 1,
+                    strategyId: stock.stats.soldStrategyId || '',
+                    confirmItems: stock.stats.soldConfirmItems || []
+                });
+                totalIncome += stock.stats.incomeAmount || 0;
+                totalSoldBonds += stock.stats.soldBonds || 0;
+                totalHoldDays += stock.stats.holdDays || 0;
+                tradeCount++;
+            }
+
+            // 按日期排序（最新的在前）
+            sellRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            // 计算综合收益率
+            const cost = parseFloat(stock.cost) || 0;
+            const avgIncomePercent = totalSoldBonds > 0 && cost > 0 ? (totalIncome / (totalSoldBonds * cost)) * 100 : 0;
+            const avgHoldDays = tradeCount > 0 ? Math.round(totalHoldDays / tradeCount) : 0;
+
+            // 渲染交易概览
+            overview.innerHTML = `
+                <h4 style="margin-bottom: 10px; color: #2c3e50;">📈 交易概览</h4>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 13px;">
+                    <div>• 总收益：<span class="${totalIncome >= 0 ? 'red' : 'green'}" style="font-weight: bold;">${totalIncome >= 0 ? '+' : ''}${totalIncome.toFixed(2)} 元</span></div>
+                    <div>• 综合收益率：<span class="${avgIncomePercent >= 0 ? 'red' : 'green'}" style="font-weight: bold;">${avgIncomePercent >= 0 ? '+' : ''}${avgIncomePercent.toFixed(2)}%</span></div>
+                    <div>• 平均持股天数：<span style="color: #7f8c8d;">${avgHoldDays} 天</span></div>
+                    <div>• 交易次数：<span style="color: #7f8c8d;">${tradeCount} 次</span></div>
+                </div>
+            `;
+
+            // 渲染交易历史
+            if (sellRecords.length > 0) {
+                history.innerHTML = sellRecords.map((record, index) => {
+                    const reasonMap = {
+                        'target': '✅ 达标',
+                        'stoploss': '🛡️ 止损',
+                        'other': '📝 其他'
+                    };
+                    const reasonText = reasonMap[record.reason] || record.reason;
+                    const isLast = index === sellRecords.length - 1;
+
+                    // 获取策略名称
+                    const strategyName = record.strategyId
+                        ? (tradingStrategies.find(s => s.id === record.strategyId)?.name || '未知策略')
+                        : '未配置策略';
+
+                    // 格式化确认项
+                    const confirmItemsText = record.confirmItems && record.confirmItems.length > 0
+                        ? record.confirmItems.map(item => item.text).join('、')
+                        : '无';
+
+                    return `
+                        <div style="background: white; border-left: 3px solid ${record.incomeAmount >= 0 ? '#e74c3c' : '#27ae60'}; padding: 12px; margin-bottom: ${isLast ? '0' : '10px'}px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-weight: bold; color: #2c3e50;">第${sellRecords.length - index}次卖出 (${record.type})</span>
+                                <span style="font-size: 12px; color: #7f8c8d;">${record.date || '--'}</span>
+                            </div>
+                            <div style="font-size: 13px; margin-bottom: 5px;">${reasonText}${record.note && record.note.trim() ? ` - ${record.note.trim()}` : ''}</div>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; font-size: 12px; color: #7f8c8d;">
+                                <div>卖出价：${(record.price || 0).toFixed(2)}</div>
+                                <div>数量：${record.bonds || 0}股</div>
+                                <div>收益：<span class="${record.incomeAmount >= 0 ? 'red' : 'green'}">${record.incomeAmount >= 0 ? '+' : ''}${(record.incomeAmount || 0).toFixed(2)}</span></div>
+                                <div>收益率：<span class="${record.incomePercent >= 0 ? 'red' : 'green'}">${record.incomePercent >= 0 ? '+' : ''}${(record.incomePercent || 0).toFixed(2)}%</span></div>
+                                <div style="grid-column: span 2;">持股天数：${record.holdDays || 0}天</div>
+                            </div>
+                            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; font-size: 12px;">
+                                <div style="margin-bottom: 4px;"><strong>📋 交易策略：</strong>${strategyName}</div>
+                                <div><strong>✅ 确认项：</strong>${confirmItemsText}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                history.innerHTML = '<div style="text-align: center; color: #95a5a6; padding: 20px;">暂无交易记录</div>';
+            }
+
+            // 统计收益分布
+            const reasonDistribution = {};
+            sellRecords.forEach(record => {
+                const reasonMap = {
+                    'target': '✅ 达标',
+                    'stoploss': '🛡️ 止损',
+                    'other': '📝 其他'
+                };
+                const reasonText = reasonMap[record.reason] || record.reason;
+                if (!reasonDistribution[reasonText]) {
+                    reasonDistribution[reasonText] = { count: 0, income: 0 };
+                }
+                reasonDistribution[reasonText].count++;
+                reasonDistribution[reasonText].income += record.incomeAmount || 0;
+            });
+
+            // 渲染收益分布
+            distribution.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; font-size: 12px;">
+                    ${Object.entries(reasonDistribution).map(([reason, data]) => `
+                        <div style="padding: 8px; background: white; border-radius: 4px;">
+                            <div style="font-weight: bold; margin-bottom: 4px;">${reason}</div>
+                            <div style="color: #7f8c8d;">${data.count}次</div>
+                            <div class="${data.income >= 0 ? 'red' : 'green'}">${data.income >= 0 ? '+' : ''}${data.income.toFixed(2)}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            popup.classList.add('active');
+        }
+
+        // 关闭卖出详情弹窗
+        function closeSoldDetailPopup(event) {
+            if (!event || event.target === document.getElementById('soldDetailPopup')) {
+                document.getElementById('soldDetailPopup').classList.remove('active');
             }
         }
 
