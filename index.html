@@ -1523,6 +1523,13 @@
                     <option value="stoploss">🛡️ 止损</option>
                     <option value="other">📝 其他</option>
                 </select>
+                <span id="soldDateFilter" style="display: none; margin-left: 10px; font-size: 12px; color: #7f8c8d;">
+                    卖出日期: <input type="date" id="soldStartDateInput" onchange="filterBySoldDate()" placeholder="起始"
+                                          style="padding: 5px 8px; border: 1px solid #ddd; border-radius: 5px; font-size: 13px; cursor: pointer;">
+                    至 <input type="date" id="soldEndDateInput" onchange="filterBySoldDate()" placeholder="结束"
+                                          style="padding: 5px 8px; border: 1px solid #ddd; border-radius: 5px; font-size: 13px; cursor: pointer;">
+                    <button onclick="clearSoldDateFilter()" style="padding: 5px 8px; margin-left: 5px; border: 1px solid #ddd; border-radius: 5px; font-size: 12px; cursor: pointer; background: white;">清除</button>
+                </span>
             </div>
         </div>
 
@@ -1552,6 +1559,7 @@
                         <th onclick="sortTable('yieldToTarget')">目标收益</th>
                         <th onclick="sortTable('yieldToStop')">止损损失</th>
                         <th onclick="sortTable('riskRewardRatio')">盈亏比</th>
+                        <th onclick="sortTable('addTime')">加入自选时间</th>
                         <th>操作</th>
                     </tr>
                 </thead>
@@ -2078,6 +2086,8 @@
         let currentFilter = 'all';
         let searchText = '';
         let currentSoldReasonFilter = 'all';
+        let currentSoldStartDateFilter = '';
+        let currentSoldEndDateFilter = '';
 
         // 投资名言
         const investmentQuotes = [
@@ -2279,10 +2289,13 @@
             { key: 'stopLoss', name: '止损价', default: true },
             { key: 'status', name: '状态', default: true },
             { key: 'soldReason', name: '卖出原因', default: true },
+            { key: 'buyTime', name: '买入时间', default: true },
+            { key: 'soldTime', name: '卖出时间', default: true },
             { key: 'yieldToTarget', name: '目标收益', default: true },
             { key: 'yieldToStop', name: '止损损失', default: true },
             { key: 'riskRewardRatio', name: '盈亏比', default: true },
             { key: 'holdDays', name: '持股天数', default: true },
+            { key: 'addTime', name: '加入自选时间', default: true },
             { key: 'disciplineScore', name: '纪律评分', default: true }
         ];
 
@@ -2303,9 +2316,9 @@
             if (stocks.length === 0) {
                 // 添加默认示例股票
                 stocks = [
-                    { code: 'sh600519', name: '贵州茅台', cost: '1000', bonds: '100', targetPrice: '1200', stopLoss: '950', buyDate: new Date().toISOString().split('T')[0] },
-                    { code: 'sz000001', name: '平安银行', cost: '10', bonds: '1000', targetPrice: '12', stopLoss: '9', buyDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] },
-                    { code: 'sz000002', name: '万科A', cost: '20', bonds: '500', targetPrice: '25', stopLoss: '18', buyDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }
+                    { code: 'sh600519', name: '贵州茅台', cost: '1000', bonds: '100', targetPrice: '1200', stopLoss: '950', buyDate: new Date().toISOString().split('T')[0], addTime: new Date().toISOString() },
+                    { code: 'sz000001', name: '平安银行', cost: '10', bonds: '1000', targetPrice: '12', stopLoss: '9', buyDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], addTime: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString() },
+                    { code: 'sz000002', name: '万科A', cost: '20', bonds: '500', targetPrice: '25', stopLoss: '18', buyDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], addTime: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() }
                 ];
                 saveStocks();
             }
@@ -2434,6 +2447,51 @@
                                 const hasMatchingReason = stock.stats.sellHistory.some(reasonMatch);
                                 if (!hasMatchingReason) return false;
                             }
+                        }
+
+                        // 按卖出日期范围筛选
+                        if (currentSoldStartDateFilter || currentSoldEndDateFilter) {
+                            let hasMatchedDate = false;
+                            const allSellDates = [];
+
+                            // 收集所有卖出日期
+                            if (hasSold && (stock.stats.soldDate || stock.stats.soldTime)) {
+                                const dateSource = stock.stats.soldTime || stock.stats.soldDate;
+                                if (dateSource) {
+                                    const soldDate = new Date(dateSource);
+                                    soldDate.setHours(0, 0, 0, 0);
+                                    allSellDates.push(soldDate);
+                                }
+                            }
+
+                            if (hasSellHistory) {
+                                stock.stats.sellHistory.forEach(record => {
+                                    const dateSource = record.time || record.date;
+                                    if (dateSource) {
+                                        const recordDate = new Date(dateSource);
+                                        recordDate.setHours(0, 0, 0, 0);
+                                        allSellDates.push(recordDate);
+                                    }
+                                });
+                            }
+
+                            // 检查是否有日期在筛选范围内
+                            if (allSellDates.length > 0) {
+                                const startDate = currentSoldStartDateFilter ? new Date(currentSoldStartDateFilter) : null;
+                                const endDate = currentSoldEndDateFilter ? new Date(currentSoldEndDateFilter) : null;
+
+                                if (startDate) startDate.setHours(0, 0, 0, 0);
+                                if (endDate) endDate.setHours(0, 0, 0, 0);
+
+                                hasMatchedDate = allSellDates.some(sellDate => {
+                                    let match = true;
+                                    if (startDate && sellDate < startDate) match = false;
+                                    if (endDate && sellDate > endDate) match = false;
+                                    return match;
+                                });
+                            }
+
+                            if (!hasMatchedDate) return false;
                         }
                     }
                 }
@@ -2885,10 +2943,13 @@
                     data-tooltip="距离当前价: ${stopLossPercent !== '--' ? (stopLossPercent > 0 ? '+' : '') + stopLossPercent + '%' : '--'}">${stock.stopLoss || '--'}</td>`,
                 status: `<td><span class="price-status ${priceStatus} ${statusTooltip ? 'price-tooltip' : ''}" ${statusTooltip ? `data-tooltip="${statusTooltip}"` : ''}>${statusText}</span></td>`,
                 soldReason: `<td>${formatSoldReason(stock)}</td>`,
+                buyTime: `<td>${formatBuyTime(stock)}</td>`,
+                soldTime: `<td>${formatSoldTime(stock)}</td>`,
                 yieldToTarget: `<td class="${yieldToTarget >= 0 ? 'red' : yieldToTarget < 0 ? 'green' : 'gray'}">${formatChangePercent(yieldToTarget)}</td>`,
                 yieldToStop: `<td class="${yieldToStop >= 0 ? 'red' : yieldToStop < 0 ? 'green' : 'gray'}">${formatChangePercent(yieldToStop)}</td>`,
                 riskRewardRatio: `<td class="price-tooltip" data-tooltip="${riskRewardRatio !== '--' ? '收益潜力是风险的 ' + riskRewardRatio.split(':')[0] + ' 倍' : '--'}">${riskRewardRatio}</td>`,
                 holdDays: `<td>${formatHoldDays(stock)}</td>`,
+                addTime: `<td>${formatAddTime(stock.addTime)}</td>`,
                 disciplineScore: renderDisciplineScore(stock, riskRewardRatio, yieldToTarget, yieldToStop, marketValue)
             };
 
@@ -2952,13 +3013,18 @@
         function filterByStatus(status) {
             currentFilter = status;
 
-            // 控制卖出原因筛选的显示
+            // 控制卖出原因筛选和日期筛选的显示
             const soldReasonFilter = document.getElementById('soldReasonFilter');
+            const soldDateFilter = document.getElementById('soldDateFilter');
             if (status === 'sold') {
                 soldReasonFilter.style.display = 'inline-block';
+                soldDateFilter.style.display = 'inline-block';
             } else {
                 soldReasonFilter.style.display = 'none';
+                soldDateFilter.style.display = 'none';
                 currentSoldReasonFilter = 'all';
+                currentSoldStartDateFilter = '';
+                currentSoldEndDateFilter = '';
             }
 
             renderStocks();
@@ -2966,6 +3032,20 @@
 
         function filterBySoldReason(reason) {
             currentSoldReasonFilter = reason;
+            renderStocks();
+        }
+
+        function filterBySoldDate() {
+            currentSoldStartDateFilter = document.getElementById('soldStartDateInput').value;
+            currentSoldEndDateFilter = document.getElementById('soldEndDateInput').value;
+            renderStocks();
+        }
+
+        function clearSoldDateFilter() {
+            document.getElementById('soldStartDateInput').value = '';
+            document.getElementById('soldEndDateInput').value = '';
+            currentSoldStartDateFilter = '';
+            currentSoldEndDateFilter = '';
             renderStocks();
         }
 
@@ -2988,6 +3068,19 @@
         function formatTime(time) {
             if (!time) return '--';
             return time.substring(8);
+        }
+
+        // 格式化加入自选时间
+        function formatAddTime(addTime) {
+            if (!addTime) return '--';
+            const date = new Date(addTime);
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
         }
 
         // 格式化收益
@@ -3052,6 +3145,69 @@
                     .map(([displayText, info]) => info.count > 1 ? `${displayText}×${info.count}` : displayText)
                     .join(', ');
                 return reasonTexts || '--';
+            }
+
+            return '--';
+        }
+
+        // 格式化买入时间
+        function formatBuyTime(stock) {
+            // 优先使用 buyTime（录入持仓时的完整时间），否则使用 buyDate（只包含日期）
+            const timeSource = stock.buyTime || stock.buyDate;
+            if (!timeSource) return '--';
+
+            const date = new Date(timeSource);
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // 格式化卖出时间
+        function formatSoldTime(stock) {
+            if (!stock.stats) return '--';
+
+            // 已全部卖出
+            if (stock.stats.sold) {
+                // 优先使用 soldTime（完整的卖出时间），否则使用 soldDate
+                const timeSource = stock.stats.soldTime || stock.stats.soldDate;
+                if (timeSource) {
+                    const date = new Date(timeSource);
+                    return date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+            }
+
+            // 有部分卖出历史，显示最近的卖出时间
+            if (stock.stats.sellHistory && stock.stats.sellHistory.length > 0) {
+                // 按时间降序排序，获取最近的一次
+                const sortedHistory = [...stock.stats.sellHistory].sort((a, b) => {
+                    const timeA = new Date(a.time || a.date || '');
+                    const timeB = new Date(b.time || b.date || '');
+                    return timeB - timeA;
+                });
+
+                const latestRecord = sortedHistory[0];
+                // 优先使用 time（完整的卖出时间），否则使用 date
+                const timeSource = latestRecord.time || latestRecord.date;
+                if (timeSource) {
+                    const date = new Date(timeSource);
+                    return date.toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
             }
 
             return '--';
@@ -3509,6 +3665,9 @@
                 income: '--',
                 targetPrice: '--',
                 stopLoss: '--',
+                addTime: new Date().toISOString(),
+                buyDate: new Date().toISOString().split('T')[0],
+                buyTime: (bonds && bonds !== '--' && parseFloat(bonds) > 0) ? new Date().toISOString() : null,
                 strategy: currentStrategyId  // 关联当前策略
             });
 
@@ -4103,6 +4262,7 @@
                 // 记录卖出信息（全部卖出）
                 stock.stats.sold = true;
                 stock.stats.soldDate = new Date().toISOString().split('T')[0];
+                stock.stats.soldTime = new Date().toISOString(); // 记录完整的卖出时间
                 stock.stats.soldReason = reason;
                 stock.stats.soldNote = note;
                 stock.stats.soldPrice = sellPrice;
@@ -4125,6 +4285,7 @@
 
                 stock.stats.sellHistory.push({
                     date: new Date().toISOString().split('T')[0],
+                    time: new Date().toISOString(), // 记录完整的卖出时间
                     price: sellPrice,
                     bonds: sellBonds,
                     reason: reason,
@@ -4724,6 +4885,11 @@
             const stopLoss = document.getElementById('editStopLoss').value.trim();
             const buyDate = document.getElementById('editBuyDate').value.trim();
 
+            // 检查是否首次录入持仓数量
+            const oldBonds = stock.bonds && stock.bonds !== '--' ? parseFloat(stock.bonds) : 0;
+            const newBonds = bonds && bonds !== '--' ? parseFloat(bonds) : 0;
+            const isFirstTimeEnteringBonds = oldBonds === 0 && newBonds > 0;
+
             // 如果选择了"不配置策略"，则保存为空
             stock.strategy = hasStrategy ? strategyId : '';
             stock.cost = cost || '--';
@@ -4731,6 +4897,11 @@
             stock.targetPrice = targetPrice || '--';
             stock.stopLoss = stopLoss || '--';
             stock.buyDate = buyDate || new Date().toISOString().split('T')[0];
+
+            // 如果首次录入持仓数量，记录完整的买入时间
+            if (isFirstTimeEnteringBonds) {
+                stock.buyTime = new Date().toISOString();
+            }
 
             // 重新计算收益
             if (cost && cost !== '--' && parseFloat(cost) > 0) {
